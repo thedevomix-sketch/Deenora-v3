@@ -3,13 +3,13 @@
  * DEPRECATED: This file is kept for backward compatibility during transition.
  * Future logic should use:
  * - import { supabase } from './lib/supabase'
- * - import { smsService } from './services/sms.service'
- * - import { offlineService } from './services/offline.service'
+ * - import { smsService } from './services/smsService'
+ * - import { offlineService } from './services/offlineService'
  */
 
 import { supabase } from './lib/supabase';
-import { smsService } from './services/sms.service';
-import { offlineService } from './services/offline.service';
+import { smsService } from './services/smsService';
+import { offlineService } from './services/offlineService';
 
 export { supabase };
 export const smsApi = smsService;
