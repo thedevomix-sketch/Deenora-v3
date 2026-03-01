@@ -3,7 +3,7 @@ const CACHE_NAME = 'deenora-v2-cache-v15';
 const CORE_ASSETS = [
   './',
   './index.html',
-  './index.tsx',
+  './src/index.tsx',
   './manifest.json',
   './index.css'
 ];

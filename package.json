@@ -12,13 +12,23 @@
   "dependencies": {
     "@google/genai": "^1.41.0",
     "@supabase/supabase-js": "^2.45.4",
+    "better-sqlite3": "^12.6.2",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "express": "^5.2.1",
     "lucide-react": "^0.463.0",
+    "motion": "^12.34.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-router-dom": "^7.13.1",
+    "recharts": "^3.7.0",
+    "tailwind-merge": "^3.5.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

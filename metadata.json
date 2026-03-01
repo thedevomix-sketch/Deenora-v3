@@ -1,6 +1,6 @@
 {
-  "name": "Madrasah Contact App 3.0 (মাদরাসা কন্টাক্ট অ্যাপ)",
-  "description": "A professional contact management system for Madrasahs in Bangladesh with REVE SMS integration.",
+  "name": "Deenora V3 - Madrasah Management",
+  "description": "A comprehensive Madrasah management system (Deenora V3) with student tracking, attendance, exams, and accounting.",
   "requestFramePermissions": [
     "camera",
     "microphone"
