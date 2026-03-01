@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { offlineService } from './services/offlineService';
+import { offlineService } from './services/OfflineService';
 import { useAuth } from './hooks/useAuth';
 import Auth from './pages/Auth';
 import Layout from './components/Layout';

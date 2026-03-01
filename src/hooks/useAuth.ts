@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { offlineService } from '../services/offlineService';
+import { offlineService } from '../services/OfflineService';
 import { Profile, Madrasah } from '../types';
 
 export const useAuth = () => {
