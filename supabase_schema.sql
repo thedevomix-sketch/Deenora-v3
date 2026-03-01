@@ -1,5 +1,11 @@
 
 -- ==========================================
+-- 0. EXTENSIONS
+-- ==========================================
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS btree_gin;
+
+-- ==========================================
 -- 1. CORE TABLES DEFINITION
 -- ==========================================
 

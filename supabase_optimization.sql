@@ -1,4 +1,8 @@
 
+-- 0. ENABLE EXTENSIONS
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS btree_gin;
+
 -- 1. CRITICAL PERFORMANCE INDICES (Tenant-First)
 -- These indices ensure that RLS filters (which always check madrasah_id) are lightning fast.
 
