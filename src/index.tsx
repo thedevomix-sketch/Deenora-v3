@@ -19,39 +19,39 @@ root.render(
 /**
  * SERVICE WORKER REGISTRATION WITH UPDATE DETECTION
  */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const isSecureContext = window.isSecureContext;
-    
-    if (isSecureContext || isLocalhost) {
-      navigator.serviceWorker.register('./sw.js')
-        .then(registration => {
-          console.log('SW registered:', registration.scope);
-          
-          // Listen for updates
-          registration.onupdatefound = () => {
-            const installingWorker = registration.installing;
-            if (installingWorker == null) return;
-            
-            installingWorker.onstatechange = () => {
-              if (installingWorker.state === 'installed') {
-                if (navigator.serviceWorker.controller) {
-                  // New content is available; please refresh.
-                  console.log('New content is available; please refresh.');
-                  // Optionally show a "Refresh" toast here.
-                  // For now, we'll force a reload after a short delay to apply updates.
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 1000);
-                }
-              }
-            };
-          };
-        })
-        .catch(err => {
-          console.warn('Service Worker registration skipped (Environment limitation).', err.message);
-        });
-    }
-  });
-}
+// if ('serviceWorker' in navigator) {
+//   window.addEventListener('load', () => {
+//     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+//     const isSecureContext = window.isSecureContext;
+//     
+//     if (isSecureContext || isLocalhost) {
+//       navigator.serviceWorker.register('./sw.js')
+//         .then(registration => {
+//           console.log('SW registered:', registration.scope);
+//           
+//           // Listen for updates
+//           registration.onupdatefound = () => {
+//             const installingWorker = registration.installing;
+//             if (installingWorker == null) return;
+//             
+//             installingWorker.onstatechange = () => {
+//               if (installingWorker.state === 'installed') {
+//                 if (navigator.serviceWorker.controller) {
+//                   // New content is available; please refresh.
+//                   console.log('New content is available; please refresh.');
+//                   // Optionally show a "Refresh" toast here.
+//                   // For now, we'll force a reload after a short delay to apply updates.
+//                   setTimeout(() => {
+//                     window.location.reload();
+//                   }, 1000);
+//                 }
+//               }
+//             };
+//           };
+//         })
+//         .catch(err => {
+//           console.warn('Service Worker registration skipped (Environment limitation).', err.message);
+//         });
+//     }
+//   });
+// }
