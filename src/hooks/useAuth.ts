@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import { offlineService } from '../services/OfflineService';
-import { Profile, Madrasah } from '../types';
+import { supabase } from 'lib/supabase';
+import { OfflineService } from 'services/OfflineService';
+import { Profile, Madrasah } from 'types';
 
 export const useAuth = () => {
   const [session, setSession] = useState<any>(null);
@@ -35,7 +35,7 @@ export const useAuth = () => {
         if (mError) throw mError;
         
         setMadrasah(madrasahData);
-        if (madrasahData) offlineService.setCache('profile', madrasahData);
+        if (madrasahData) OfflineService.setCache('profile', madrasahData);
       } else {
         // If profile doesn't exist yet, it might be the trigger lagging or 
         // a manual auth user without SQL data.
@@ -50,7 +50,7 @@ export const useAuth = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     localStorage.removeItem('teacher_session');
-    offlineService.removeCache('profile');
+    OfflineService.removeCache('profile');
     window.location.reload();
   };
 

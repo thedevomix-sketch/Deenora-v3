@@ -1,23 +1,23 @@
 
 import React, { useState, useEffect } from 'react';
-import { offlineService } from './services/OfflineService';
-import { useAuth } from './hooks/useAuth';
-import Auth from './pages/Auth';
-import Layout from './components/Layout';
-import Home from './pages/Home';
-import Classes from './pages/Classes';
-import Students from './pages/Students';
-import StudentDetails from './pages/StudentDetails';
-import StudentForm from './pages/StudentForm';
-import Account from './pages/Account';
-import AdminPanel from './pages/AdminPanel';
-import WalletSMS from './pages/WalletSMS';
-import DataManagement from './pages/DataManagement';
-import Teachers from './pages/Teachers';
-import Accounting from './pages/Accounting';
-import Attendance from './pages/Attendance';
-import Exams from './pages/Exams';
-import { View, Class, Student, Language } from './types';
+import { OfflineService } from 'services/OfflineService';
+import { useAuth } from 'hooks/useAuth';
+import Auth from 'pages/Auth';
+import Layout from 'components/Layout';
+import Home from 'pages/Home';
+import Classes from 'pages/Classes';
+import Students from 'pages/Students';
+import StudentDetails from 'pages/StudentDetails';
+import StudentForm from 'pages/StudentForm';
+import Account from 'pages/Account';
+import AdminPanel from 'pages/AdminPanel';
+import WalletSMS from 'pages/WalletSMS';
+import DataManagement from 'pages/DataManagement';
+import Teachers from 'pages/Teachers';
+import Accounting from 'pages/Accounting';
+import Attendance from 'pages/Attendance';
+import Exams from 'pages/Exams';
+import { View, Class, Student, Language } from 'types';
 import { BookOpen, ShieldAlert } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -33,7 +33,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const handleStatusChange = () => {
-      if (navigator.onLine) offlineService.processQueue();
+      if (navigator.onLine) OfflineService.processQueue();
     };
     window.addEventListener('online', handleStatusChange);
     window.addEventListener('offline', handleStatusChange);
