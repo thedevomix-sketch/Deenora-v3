@@ -1,5 +1,5 @@
 
-import { Language } from './types';
+import { Language } from 'types';
 
 export const translations = {
   bn: {
