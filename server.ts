@@ -597,6 +597,226 @@ async function startServer() {
     }
   });
 
+  app.post('/api/pdf/admit-card', async (req, res) => {
+    try {
+      const { exam, students, madrasah, templateId = 'classic' } = req.body;
+      const doc = new PDFDocument({ size: 'A4', margin: 30 });
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=admit-cards.pdf`);
+      doc.pipe(res);
+
+      if (fontBuffer) doc.font(fontBuffer);
+      else doc.font('Helvetica');
+
+      const drawClassicAdmitCard = (student: any, x: number, y: number, width: number, height: number) => {
+          doc.rect(x, y, width, height).stroke();
+          
+          // Header
+          doc.fontSize(16).text(madrasah.name || 'Madrasah Name', x, y + 20, { width, align: 'center' });
+          doc.fontSize(12).text('Admit Card', x, y + 45, { width, align: 'center' });
+          doc.fontSize(10).text(exam.exam_name, x, y + 60, { width, align: 'center' });
+          
+          // Photo Placeholder
+          doc.rect(x + width - 100, y + 80, 80, 80).stroke();
+          doc.fontSize(8).text('Photo', x + width - 100, y + 115, { width: 80, align: 'center' });
+
+          // Details
+          const startY = y + 90;
+          const labelX = x + 30;
+          const valueX = x + 100;
+          
+          doc.fontSize(10);
+          doc.text('Name:', labelX, startY);
+          doc.text(student.student_name, valueX, startY);
+          
+          doc.text('Class:', labelX, startY + 20);
+          doc.text(student.classes?.class_name || '', valueX, startY + 20);
+          
+          doc.text('Roll:', labelX, startY + 40);
+          doc.text(student.roll, valueX, startY + 40);
+          
+          doc.text('Exam Date:', labelX, startY + 60);
+          doc.text(new Date(exam.exam_date).toLocaleDateString(), valueX, startY + 60);
+
+          // Instructions
+          doc.fontSize(8).text('Instructions: Bring this card to the exam hall. Do not carry mobile phones.', x + 30, y + height - 40, { width: width - 60, align: 'center' });
+      };
+
+      const drawModernAdmitCard = (student: any, x: number, y: number, width: number, height: number) => {
+          // Header Background
+          doc.rect(x, y, width, 70).fill('#1E3A8A');
+          
+          // Header Text
+          doc.fillColor('white');
+          doc.fontSize(16).text(madrasah.name || 'Madrasah Name', x, y + 20, { width, align: 'center' });
+          doc.fontSize(10).text(`${exam.exam_name} | Admit Card`, x, y + 45, { width, align: 'center' });
+          
+          doc.fillColor('black');
+          
+          // Photo Placeholder (Circle)
+          doc.save();
+          doc.circle(x + width - 60, y + 110, 40).stroke();
+          doc.fontSize(8).text('Photo', x + width - 80, y + 105, { width: 40, align: 'center' });
+          doc.restore();
+
+          // Details
+          const startY = y + 90;
+          const labelX = x + 30;
+          const valueX = x + 120;
+          
+          doc.fontSize(12).font('Helvetica-Bold').text(student.student_name, labelX, startY);
+          doc.fontSize(10).font(fontBuffer || 'Helvetica');
+          
+          doc.text(`Class: ${student.classes?.class_name || ''}`, labelX, startY + 20);
+          doc.text(`Roll: ${student.roll}`, labelX, startY + 35);
+          doc.text(`Date: ${new Date(exam.exam_date).toLocaleDateString()}`, labelX, startY + 50);
+
+          // Footer Line
+          doc.rect(x, y + height - 10, width, 10).fill('#1E3A8A');
+      };
+
+      const drawMinimalAdmitCard = (student: any, x: number, y: number, width: number, height: number) => {
+          // No border, just text
+          doc.fontSize(14).font('Helvetica-Bold').text(madrasah.name || 'Madrasah Name', x, y + 20, { width, align: 'center' });
+          doc.fontSize(10).font(fontBuffer || 'Helvetica').text('Admit Card', x, y + 40, { width, align: 'center' });
+          
+          doc.moveTo(x + 50, y + 55).lineTo(x + width - 50, y + 55).stroke();
+
+          const startY = y + 70;
+          const col1X = x + 50;
+          const col2X = x + width / 2 + 20;
+
+          doc.fontSize(10);
+          doc.text(`Name: ${student.student_name}`, col1X, startY);
+          doc.text(`Class: ${student.classes?.class_name || ''}`, col1X, startY + 20);
+          doc.text(`Roll: ${student.roll}`, col2X, startY);
+          doc.text(`Exam: ${exam.exam_name}`, col2X, startY + 20);
+          
+          doc.rect(x + width - 80, y + 20, 60, 60).stroke(); // Photo
+      };
+
+      const cardHeight = 380;
+      const cardWidth = 535;
+      
+      students.forEach((student: any, index: number) => {
+          if (index % 2 === 0 && index !== 0) doc.addPage();
+          
+          const y = (index % 2) * (cardHeight + 20) + 30;
+          
+          if (templateId === 'modern') {
+              drawModernAdmitCard(student, 30, y, cardWidth, cardHeight);
+          } else if (templateId === 'minimal') {
+              drawMinimalAdmitCard(student, 30, y, cardWidth, cardHeight);
+          } else {
+              drawClassicAdmitCard(student, 30, y, cardWidth, cardHeight);
+          }
+      });
+
+      doc.end();
+    } catch (e) {
+      console.error(e);
+      res.status(500).send('Error');
+    }
+  });
+
+  app.post('/api/pdf/seat-plan', async (req, res) => {
+    try {
+      const { assignments, madrasah, templateId = 'list' } = req.body;
+      const doc = new PDFDocument({ size: 'A4', margin: 30 });
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=seat-plan.pdf`);
+      doc.pipe(res);
+
+      if (fontBuffer) doc.font(fontBuffer);
+      else doc.font('Helvetica');
+
+      // Group by Room
+      const rooms: any = {};
+      assignments.forEach((a: any) => {
+          if (!rooms[a.room_name]) rooms[a.room_name] = [];
+          rooms[a.room_name].push(a);
+      });
+
+      Object.keys(rooms).forEach((roomName, index) => {
+          if (index > 0) doc.addPage();
+          
+          doc.fontSize(24).text(madrasah.name || 'Madrasah Name', { align: 'center' });
+          doc.fontSize(18).text(`Seat Plan - ${roomName}`, { align: 'center' });
+          doc.moveDown();
+
+          const roomAssignments = rooms[roomName];
+          
+          if (templateId === 'grid') {
+              // Grid View
+              const cols = 4;
+              const boxWidth = 120;
+              const boxHeight = 60;
+              const startX = 40;
+              let currentX = startX;
+              let currentY = 150;
+              
+              roomAssignments.forEach((a: any, i: number) => {
+                  if (i > 0 && i % cols === 0) {
+                      currentX = startX;
+                      currentY += boxHeight + 10;
+                  }
+                  
+                  if (currentY > 750) {
+                      doc.addPage();
+                      currentY = 50;
+                  }
+
+                  doc.rect(currentX, currentY, boxWidth, boxHeight).stroke();
+                  doc.fontSize(10).text(`Seat ${a.seat_number}`, currentX + 5, currentY + 5);
+                  doc.fontSize(10).text(a.student_name, currentX + 5, currentY + 20, { width: boxWidth - 10, ellipsis: true });
+                  doc.fontSize(8).text(`${a.class_name} (Roll: ${a.roll})`, currentX + 5, currentY + 40);
+                  
+                  currentX += boxWidth + 10;
+              });
+
+          } else {
+              // List View (Default)
+              const tableTop = 150;
+              let y = tableTop;
+              
+              doc.fontSize(12).font('Helvetica-Bold');
+              doc.text('Seat', 50, y);
+              doc.text('Name', 120, y);
+              doc.text('Class', 350, y);
+              doc.text('Roll', 450, y);
+              
+              doc.moveTo(50, y + 15).lineTo(550, y + 15).stroke();
+              y += 25;
+              
+              if (fontBuffer) doc.font(fontBuffer);
+              else doc.font('Helvetica');
+              doc.fontSize(12);
+
+              roomAssignments.forEach((a: any) => {
+                  if (y > 750) {
+                      doc.addPage();
+                      y = 50;
+                  }
+                  
+                  doc.text(a.seat_number.toString(), 50, y);
+                  doc.text(a.student_name, 120, y, { width: 220, ellipsis: true });
+                  doc.text(a.class_name, 350, y);
+                  doc.text(a.roll.toString(), 450, y);
+                  
+                  y += 20;
+              });
+          }
+      });
+
+      doc.end();
+    } catch (e) {
+      console.error(e);
+      res.status(500).send('Error');
+    }
+  });
+
   // Vite middleware
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

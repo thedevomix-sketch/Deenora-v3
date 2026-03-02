@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from 'supabase';
-import { Madrasah, Class, Student, Exam, ExamSubject, Language, UserRole } from 'types';
-import { GraduationCap, Plus, ChevronRight, BookOpen, Trophy, Save, X, Edit3, Trash2, Loader2, ArrowLeft, Calendar, LayoutGrid, CheckCircle2, FileText, Send, User, Hash, Star, AlertCircle, TrendingUp, Download } from 'lucide-react';
+import { Madrasah, Class, Student, Exam, ExamSubject, Language, UserRole, ExamRoom, SeatAssignment } from 'types';
+import { GraduationCap, Plus, ChevronRight, BookOpen, Trophy, Save, X, Edit3, Trash2, Loader2, ArrowLeft, Calendar, LayoutGrid, CheckCircle2, FileText, Send, User, Hash, Star, AlertCircle, TrendingUp, Download, CreditCard, Grid3X3, Printer, RefreshCw } from 'lucide-react';
 import { t } from 'translations';
 import { sortMadrasahClasses } from 'pages/Classes';
 import SmartResultAnalytics from 'components/SmartResultAnalytics';
@@ -16,7 +16,7 @@ interface ExamsProps {
 }
 
 const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateToFinalResults }) => {
-  const [view, setView] = useState<'list' | 'subjects' | 'marks' | 'report' | 'insights'>('list');
+  const [view, setView] = useState<'list' | 'subjects' | 'marks' | 'report' | 'insights' | 'admit-card' | 'seat-plan'>('list');
   const [exams, setExams] = useState<Exam[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
@@ -25,6 +25,14 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
   const [rankingData, setRankingData] = useState<any[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   
+  // Seat Plan State
+  const [rooms, setRooms] = useState<ExamRoom[]>([{ id: '1', room_name: 'Room 101', capacity: 30 }]);
+  const [seatAssignments, setSeatAssignments] = useState<SeatAssignment[]>([]);
+  const [selectedClassesForSeatPlan, setSelectedClassesForSeatPlan] = useState<string[]>([]);
+  const [seatPlanConfig, setSeatPlanConfig] = useState({
+      randomize: false
+  });
+
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showAddExam, setShowAddExam] = useState(false);
@@ -109,6 +117,162 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
     if (percentage >= 40) return { gpa: '2.00', grade: 'C' };
     if (percentage >= 33) return { gpa: '1.00', grade: 'D' };
     return { gpa: '0.00', grade: 'F' };
+  };
+
+  // Template Configurations
+  const admitCardTemplates = [
+    { id: 'classic', name: 'Classic', description: 'Traditional layout with border' },
+    { id: 'modern', name: 'Modern', description: 'Clean design with accent colors' },
+    { id: 'minimal', name: 'Minimal', description: 'Simple, ink-saving design' }
+  ];
+
+  const seatPlanTemplates = [
+    { id: 'list', name: 'List View', description: 'Room-wise student list (Wall Posting)' },
+    { id: 'grid', name: 'Grid View', description: 'Visual seat arrangement' }
+  ];
+
+  const [showAdmitCardModal, setShowAdmitCardModal] = useState(false);
+  const [selectedAdmitCardTemplate, setSelectedAdmitCardTemplate] = useState('classic');
+  const [selectedSeatPlanTemplate, setSelectedSeatPlanTemplate] = useState('list');
+  const [examForAdmitCard, setExamForAdmitCard] = useState<Exam | null>(null);
+
+  const handleDownloadAdmitCard = (exam: Exam) => {
+      setExamForAdmitCard(exam);
+      setShowAdmitCardModal(true);
+  };
+
+  const confirmDownloadAdmitCard = async () => {
+    if (!madrasah || !examForAdmitCard) return;
+    
+    // Fetch students for the exam class
+    const { data: stds } = await supabase.from('students').select('*, classes(class_name)').eq('class_id', examForAdmitCard.class_id).order('roll', { ascending: true });
+    
+    if (!stds || stds.length === 0) {
+        alert('No students found for this class');
+        return;
+    }
+
+    const payload = {
+        exam: examForAdmitCard,
+        students: stds,
+        madrasah: { name: madrasah.name, logo_url: madrasah.logo_url },
+        templateId: selectedAdmitCardTemplate
+    };
+
+    try {
+        const response = await fetch('/api/pdf/admit-card', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `admit-cards-${examForAdmitCard.exam_name}-${selectedAdmitCardTemplate}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            setShowAdmitCardModal(false);
+        } else {
+            alert('Failed to generate Admit Cards');
+        }
+    } catch (error) {
+        console.error('Download error:', error);
+        alert('Error downloading Admit Cards');
+    }
+  };
+
+  const handleGenerateSeatPlan = async () => {
+      if (selectedClassesForSeatPlan.length === 0) {
+          alert('Please select at least one class');
+          return;
+      }
+      
+      setLoading(true);
+      // Fetch students from selected classes
+      const { data: stds } = await supabase.from('students')
+        .select('*, classes(class_name)')
+        .in('class_id', selectedClassesForSeatPlan)
+        .order('class_id', { ascending: true })
+        .order('roll', { ascending: true });
+        
+      if (!stds || stds.length === 0) {
+          setLoading(false);
+          alert('No students found');
+          return;
+      }
+
+      let studentsToAssign = [...stds];
+      if (seatPlanConfig.randomize) {
+          studentsToAssign = studentsToAssign.sort(() => Math.random() - 0.5);
+      }
+
+      const assignments: SeatAssignment[] = [];
+      let currentRoomIndex = 0;
+      let currentSeat = 1;
+
+      for (const student of studentsToAssign) {
+          if (currentRoomIndex >= rooms.length) break; // No more rooms
+
+          const room = rooms[currentRoomIndex];
+          
+          assignments.push({
+              student_id: student.id,
+              student_name: student.student_name,
+              class_name: student.classes?.class_name || '',
+              roll: student.roll || 0,
+              room_name: room.room_name,
+              seat_number: currentSeat
+          });
+
+          currentSeat++;
+          if (currentSeat > room.capacity) {
+              currentRoomIndex++;
+              currentSeat = 1;
+          }
+      }
+
+      setSeatAssignments(assignments);
+      setLoading(false);
+  };
+
+  const handleDownloadSeatPlan = async () => {
+      if (seatAssignments.length === 0) return;
+      
+      const payload = {
+          assignments: seatAssignments,
+          madrasah: { name: madrasah?.name },
+          templateId: selectedSeatPlanTemplate
+      };
+
+      try {
+        const response = await fetch('/api/pdf/seat-plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `seat-plan-${selectedSeatPlanTemplate}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } else {
+            alert('Failed to generate PDF');
+        }
+      } catch (e) {
+          console.error(e);
+          alert('Error downloading Seat Plan');
+      }
   };
 
   const handleAddExam = async () => {
@@ -281,7 +445,7 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
             <ArrowLeft size={20}/>
           </button>
           <h1 className="text-xl font-black text-[#1E293B] font-noto">
-            {view === 'list' ? t('exams', lang) : view === 'insights' ? t('prediction_system', lang) : selectedExam?.exam_name}
+            {view === 'list' ? t('exams', lang) : view === 'insights' ? t('prediction_system', lang) : view === 'seat-plan' ? 'Seat Plan' : selectedExam?.exam_name}
           </h1>
           {view === 'report' && (
               <button onClick={handleDownloadClassResult} className="w-10 h-10 bg-blue-50 text-[#2563EB] rounded-xl flex items-center justify-center border border-blue-100 hover:bg-blue-100 transition-colors">
@@ -289,13 +453,16 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
               </button>
           )}
         </div>
-        {(view === 'list' || view === 'insights') && role === 'madrasah_admin' && (
+        {(view === 'list' || view === 'insights' || view === 'seat-plan') && role === 'madrasah_admin' && (
             <div className="flex gap-2">
                 {onNavigateToFinalResults && (
                   <button onClick={onNavigateToFinalResults} className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center border border-purple-100 shadow-sm active:scale-95 transition-all">
                     <Trophy size={20} />
                   </button>
                 )}
+                <button onClick={() => setView(view === 'seat-plan' ? 'list' : 'seat-plan')} className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${view === 'seat-plan' ? 'bg-[#2563EB] text-white border-[#2563EB]' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+                    <Grid3X3 size={20}/>
+                </button>
                 <button onClick={() => setView(view === 'insights' ? 'list' : 'insights')} className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${view === 'insights' ? 'bg-[#2563EB] text-white border-[#2563EB]' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
                     <TrendingUp size={20}/>
                 </button>
@@ -306,6 +473,140 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
 
       {view === 'insights' && madrasah && (
           <SmartResultAnalytics madrasahId={madrasah.id} lang={lang} />
+      )}
+
+      {view === 'seat-plan' && (
+        <div className="space-y-6">
+            {/* Configuration Section */}
+            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-bubble space-y-6">
+                <h3 className="text-lg font-black text-[#1E3A8A] font-noto">Seat Plan Configuration</h3>
+                
+                {/* Class Selection */}
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Classes</label>
+                    <div className="flex flex-wrap gap-2">
+                        {classes.map(c => (
+                            <button 
+                                key={c.id}
+                                onClick={() => {
+                                    if (selectedClassesForSeatPlan.includes(c.id)) {
+                                        setSelectedClassesForSeatPlan(prev => prev.filter(id => id !== c.id));
+                                    } else {
+                                        setSelectedClassesForSeatPlan(prev => [...prev, c.id]);
+                                    }
+                                }}
+                                className={`px-4 py-2 rounded-xl text-xs font-black border transition-all ${selectedClassesForSeatPlan.includes(c.id) ? 'bg-blue-50 text-[#2563EB] border-blue-200' : 'bg-slate-50 text-slate-400 border-slate-100'}`}
+                            >
+                                {c.class_name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Room Configuration */}
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rooms & Capacity</label>
+                    {rooms.map((room, idx) => (
+                        <div key={room.id} className="flex gap-2">
+                            <input 
+                                type="text" 
+                                value={room.room_name}
+                                onChange={(e) => {
+                                    const newRooms = [...rooms];
+                                    newRooms[idx].room_name = e.target.value;
+                                    setRooms(newRooms);
+                                }}
+                                className="flex-1 h-10 bg-slate-50 border border-slate-100 rounded-xl px-3 text-xs font-bold outline-none"
+                                placeholder="Room Name"
+                            />
+                            <input 
+                                type="number" 
+                                value={room.capacity}
+                                onChange={(e) => {
+                                    const newRooms = [...rooms];
+                                    newRooms[idx].capacity = parseInt(e.target.value) || 0;
+                                    setRooms(newRooms);
+                                }}
+                                className="w-24 h-10 bg-slate-50 border border-slate-100 rounded-xl px-3 text-xs font-bold outline-none"
+                                placeholder="Capacity"
+                            />
+                            <button onClick={() => setRooms(rooms.filter((_, i) => i !== idx))} className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center"><Trash2 size={16}/></button>
+                        </div>
+                    ))}
+                    <button onClick={() => setRooms([...rooms, { id: Date.now().toString(), room_name: `Room ${101 + rooms.length}`, capacity: 30 }])} className="text-xs font-black text-[#2563EB] flex items-center gap-1 mt-2">
+                        <Plus size={14}/> Add Room
+                    </button>
+                </div>
+
+                {/* Options */}
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Template</label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {seatPlanTemplates.map(t => (
+                            <button 
+                                key={t.id}
+                                onClick={() => setSelectedSeatPlanTemplate(t.id)}
+                                className={`p-3 rounded-xl border text-left transition-all ${selectedSeatPlanTemplate === t.id ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-100' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'}`}
+                            >
+                                <div className={`font-black text-xs ${selectedSeatPlanTemplate === t.id ? 'text-[#2563EB]' : 'text-slate-600'}`}>{t.name}</div>
+                                <div className="text-[10px] text-slate-400 mt-1">{t.description}</div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <input 
+                        type="checkbox" 
+                        checked={seatPlanConfig.randomize}
+                        onChange={(e) => setSeatPlanConfig(prev => ({ ...prev, randomize: e.target.checked }))}
+                        className="w-4 h-4 rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB]"
+                    />
+                    <label className="text-xs font-bold text-slate-600">Randomize Seating</label>
+                </div>
+
+                <button onClick={handleGenerateSeatPlan} disabled={loading} className="w-full h-14 bg-[#2563EB] text-white font-black rounded-2xl shadow-premium flex items-center justify-center gap-2 active:scale-95 transition-all">
+                    {loading && seatAssignments.length === 0 ? <Loader2 className="animate-spin" /> : <><RefreshCw size={20}/> Generate Seat Plan</>}
+                </button>
+            </div>
+
+            {/* Results */}
+            {seatAssignments.length > 0 && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-black text-[#1E3A8A] font-noto">Generated Plan</h3>
+                        <button onClick={handleDownloadSeatPlan} className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl font-black text-xs flex items-center gap-2 border border-emerald-100">
+                            <Printer size={16}/> Print / Download
+                        </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {rooms.map(room => {
+                            const roomAssignments = seatAssignments.filter(sa => sa.room_name === room.room_name);
+                            if (roomAssignments.length === 0) return null;
+                            
+                            return (
+                                <div key={room.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h4 className="font-black text-[#1E3A8A]">{room.room_name}</h4>
+                                        <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">{roomAssignments.length} / {room.capacity}</span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {roomAssignments.map(sa => (
+                                            <div key={sa.student_id} className="bg-slate-50 p-2 rounded-xl border border-slate-100 text-center">
+                                                <div className="text-[10px] font-black text-[#2563EB] mb-0.5">Seat {sa.seat_number}</div>
+                                                <div className="text-[9px] font-bold text-slate-600 truncate">{sa.student_name}</div>
+                                                <div className="text-[8px] font-bold text-slate-400">{sa.class_name} (Roll: {sa.roll})</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
       )}
 
       {view === 'list' && (
@@ -330,6 +631,9 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
                     <button onClick={() => { setSelectedExam(exam); setView('marks'); fetchSubjects(exam.id); fetchMarkEntryData(exam.id, exam.class_id); }} className="py-2.5 bg-blue-50 text-[#2563EB] rounded-xl text-[9px] font-black uppercase tracking-widest border border-blue-100 active:scale-95 transition-all">{t('enter_marks', lang)}</button>
                     <button onClick={() => { setSelectedExam(exam); setView('report'); fetchSubjects(exam.id); fetchRanking(exam.id); fetchMarkEntryData(exam.id, exam.class_id); }} className="py-2.5 bg-[#2563EB] text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-premium active:scale-95 transition-all">{t('rank', lang)}</button>
                 </div>
+                <button onClick={() => handleDownloadAdmitCard(exam)} className="w-full py-2.5 bg-purple-50 text-purple-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-purple-100 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <CreditCard size={14}/> Admit Card
+                </button>
             </div>
           ))}
         </div>
@@ -473,6 +777,37 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
       )}
 
       {/* MODALS */}
+      {showAdmitCardModal && (
+        <div className="fixed inset-0 bg-[#080A12]/60 backdrop-blur-xl z-[999] flex items-center justify-center p-6">
+          <div className="bg-white w-full max-w-md rounded-[3rem] p-8 space-y-6 animate-in zoom-in-95">
+             <div className="flex items-center justify-between">
+               <h3 className="text-xl font-black text-[#1E3A8A]">Select Admit Card Template</h3>
+               <button onClick={() => setShowAdmitCardModal(false)} className="w-9 h-9 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center"><X size={18} /></button>
+             </div>
+             
+             <div className="space-y-3">
+                {admitCardTemplates.map(t => (
+                    <button 
+                        key={t.id}
+                        onClick={() => setSelectedAdmitCardTemplate(t.id)}
+                        className={`w-full p-4 rounded-2xl border text-left transition-all flex items-center justify-between group ${selectedAdmitCardTemplate === t.id ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-100' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'}`}
+                    >
+                        <div>
+                            <div className={`font-black text-sm ${selectedAdmitCardTemplate === t.id ? 'text-[#2563EB]' : 'text-slate-700'}`}>{t.name}</div>
+                            <div className="text-xs text-slate-400 mt-1">{t.description}</div>
+                        </div>
+                        {selectedAdmitCardTemplate === t.id && <CheckCircle2 className="text-[#2563EB]" size={20} />}
+                    </button>
+                ))}
+             </div>
+
+             <button onClick={confirmDownloadAdmitCard} className="w-full py-5 bg-[#2563EB] text-white font-black rounded-full shadow-premium flex items-center justify-center gap-3 active:scale-95 transition-all">
+               <Download size={20}/> Download Admit Cards
+             </button>
+          </div>
+        </div>
+      )}
+
       {showAddExam && (
         <div className="fixed inset-0 bg-[#080A12]/60 backdrop-blur-xl z-[999] flex items-center justify-center p-6">
           <div className="bg-white w-full max-w-sm rounded-[3rem] p-8 space-y-6 animate-in zoom-in-95">

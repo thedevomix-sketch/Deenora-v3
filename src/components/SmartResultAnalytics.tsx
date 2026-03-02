@@ -3,18 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from 'supabase';
 import { Language } from 'types';
 import { t } from 'translations';
-import { TrendingUp, TrendingDown, Award, AlertCircle, Loader2, User, ChevronRight } from 'lucide-react';
-
-interface ResultInsight {
-  student_id: string;
-  student_name: string;
-  class_name: string;
-  roll: number;
-  current_avg: number;
-  previous_avg: number;
-  change: number;
-  status: 'improving' | 'declining' | 'stable';
-}
+import { TrendingUp, TrendingDown, Award, AlertCircle, Loader2, User, ChevronRight, BarChart2, BookOpen, Users, ArrowUpRight, ArrowDownRight, Filter } from 'lucide-react';
 
 interface SmartResultAnalyticsProps {
   madrasahId: string;
@@ -22,83 +11,318 @@ interface SmartResultAnalyticsProps {
 }
 
 const SmartResultAnalytics: React.FC<SmartResultAnalyticsProps> = ({ madrasahId, lang }) => {
-  const [insights, setInsights] = useState<ResultInsight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string>('all');
+  const [analytics, setAnalytics] = useState<{
+    classPerformance: any[];
+    subjectWeakness: any[];
+    improvementInsights: any[];
+    overallAvg: number;
+  }>({
+    classPerformance: [],
+    subjectWeakness: [],
+    improvementInsights: [],
+    overallAvg: 0
+  });
 
   useEffect(() => {
-    fetchInsights();
+    fetchClasses();
   }, [madrasahId]);
 
-  const fetchInsights = async () => {
+  useEffect(() => {
+    fetchAnalytics();
+  }, [madrasahId, selectedClassId]);
+
+  const fetchClasses = async () => {
+    const { data } = await supabase.from('classes').select('*').eq('madrasah_id', madrasahId);
+    if (data) setClasses(data);
+  };
+
+  const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      // This logic compares the latest exam with the one before it for each student
-      const { data, error } = await supabase.rpc('get_smart_result_insights', { p_madrasah_id: madrasahId });
-      if (error) throw error;
-      if (data) setInsights(data);
+        // Fetch Exams
+        let examQuery = supabase.from('exams').select('*').eq('madrasah_id', madrasahId).order('exam_date', { ascending: true });
+        if (selectedClassId !== 'all') {
+            examQuery = examQuery.eq('class_id', selectedClassId);
+        }
+        const { data: exams } = await examQuery;
+        
+        if (!exams || exams.length === 0) {
+            setAnalytics({
+                classPerformance: [],
+                subjectWeakness: [],
+                improvementInsights: [],
+                overallAvg: 0
+            });
+            setLoading(false);
+            return;
+        }
+
+        const examIds = exams.map(e => e.id);
+
+        // Fetch Subjects
+        const { data: subjects } = await supabase.from('exam_subjects').select('*').in('exam_id', examIds);
+        
+        // Fetch Marks
+        const { data: marks } = await supabase.from('exam_marks').select('*').in('exam_id', examIds);
+
+        // Fetch Students
+        let studentQuery = supabase.from('students').select('id, student_name, roll, class_id').eq('madrasah_id', madrasahId);
+        if (selectedClassId !== 'all') {
+            studentQuery = studentQuery.eq('class_id', selectedClassId);
+        }
+        const { data: students } = await studentQuery;
+
+        if (!marks || !subjects || !students) {
+             setLoading(false);
+             return;
+        }
+
+        // --- Process Class Performance ---
+        const classPerformance: any[] = [];
+        let totalOverallPercentage = 0;
+        let totalOverallCount = 0;
+
+        const classesToProcess = selectedClassId === 'all' ? classes : classes.filter(c => c.id === selectedClassId);
+
+        classesToProcess.forEach(cls => {
+            const classExams = exams.filter(e => e.class_id === cls.id);
+            const classExamIds = classExams.map(e => e.id);
+            const classMarks = marks.filter(m => classExamIds.includes(m.exam_id));
+            
+            if (classMarks.length > 0) {
+                let totalPercentage = 0;
+                let count = 0;
+                
+                classMarks.forEach(m => {
+                    const subject = subjects.find(s => s.id === m.subject_id);
+                    if (subject) {
+                        const pct = (m.marks_obtained / subject.full_marks) * 100;
+                        totalPercentage += pct;
+                        count++;
+                        
+                        totalOverallPercentage += pct;
+                        totalOverallCount++;
+                    }
+                });
+                
+                const avg = count > 0 ? totalPercentage / count : 0;
+                classPerformance.push({
+                    class_name: cls.class_name,
+                    average: avg.toFixed(1),
+                    student_count: students.filter(s => s.class_id === cls.id).length
+                });
+            }
+        });
+
+        // --- Process Subject Weakness ---
+        const subjectStats: Record<string, { total: number, count: number }> = {};
+        marks.forEach(m => {
+            const subject = subjects.find(s => s.id === m.subject_id);
+            if (subject) {
+                const name = subject.subject_name.trim();
+                if (!subjectStats[name]) subjectStats[name] = { total: 0, count: 0 };
+                
+                subjectStats[name].total += (m.marks_obtained / subject.full_marks) * 100;
+                subjectStats[name].count++;
+            }
+        });
+        
+        const subjectWeakness = Object.entries(subjectStats)
+            .map(([name, stats]) => ({ name, average: stats.total / stats.count }))
+            .sort((a, b) => a.average - b.average)
+            .slice(0, 5);
+
+        // --- Process Improvement ---
+        const studentPerformance: Record<string, { exam_date: string, average: number }[]> = {};
+        
+        students.forEach(std => {
+            const stdMarks = marks.filter(m => m.student_id === std.id);
+            const stdExams = [...new Set(stdMarks.map(m => m.exam_id))];
+            
+            const examAvgs: { exam_date: string, average: number }[] = [];
+            
+            stdExams.forEach(eid => {
+                const exam = exams.find(e => e.id === eid);
+                const mks = stdMarks.filter(m => m.exam_id === eid);
+                
+                let total = 0;
+                let count = 0;
+                mks.forEach(m => {
+                    const sub = subjects.find(s => s.id === m.subject_id);
+                    if (sub) {
+                        total += (m.marks_obtained / sub.full_marks) * 100;
+                        count++;
+                    }
+                });
+                
+                if (exam && count > 0) {
+                    examAvgs.push({
+                        exam_date: exam.exam_date,
+                        average: total / count
+                    });
+                }
+            });
+            
+            examAvgs.sort((a, b) => new Date(a.exam_date).getTime() - new Date(b.exam_date).getTime());
+            studentPerformance[std.id] = examAvgs;
+        });
+
+        const improvementInsights: any[] = [];
+        students.forEach(std => {
+            const perfs = studentPerformance[std.id];
+            if (perfs && perfs.length >= 2) {
+                const current = perfs[perfs.length - 1];
+                const prev = perfs[perfs.length - 2];
+                const change = current.average - prev.average;
+                
+                improvementInsights.push({
+                    student_name: std.student_name,
+                    class_name: classes.find(c => c.id === std.class_id)?.class_name,
+                    roll: std.roll,
+                    current_avg: current.average.toFixed(1),
+                    change: parseFloat(change.toFixed(1)),
+                    status: change >= 0 ? 'improving' : 'declining'
+                });
+            }
+        });
+        
+        improvementInsights.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+
+        setAnalytics({
+            classPerformance: classPerformance.sort((a, b) => parseFloat(b.average) - parseFloat(a.average)),
+            subjectWeakness,
+            improvementInsights: improvementInsights.slice(0, 5),
+            overallAvg: totalOverallCount > 0 ? totalOverallPercentage / totalOverallCount : 0
+        });
+
     } catch (err) {
-      console.error('Smart Result Analytics Error:', err);
+        console.error(err);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#2563EB]" /></div>;
 
-  const improving = insights.filter(i => i.status === 'improving');
-  const declining = insights.filter(i => i.status === 'declining');
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble">
-          <div className="flex items-center gap-3 mb-2">
-            <TrendingUp className="text-emerald-500" size={20} />
-            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Improving</span>
-          </div>
-          <h4 className="text-2xl font-black text-[#1E3A8A]">{improving.length}</h4>
-          <p className="text-[8px] font-bold text-emerald-600/60 uppercase">Students showing progress</p>
-        </div>
-        <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble">
-          <div className="flex items-center gap-3 mb-2">
-            <TrendingDown className="text-red-500" size={20} />
-            <span className="text-[10px] font-black text-red-600 uppercase tracking-widest">Declining</span>
-          </div>
-          <h4 className="text-2xl font-black text-[#1E3A8A]">{declining.length}</h4>
-          <p className="text-[8px] font-bold text-red-600/60 uppercase">Needs attention</p>
+      
+      {/* Filter */}
+      <div className="flex justify-end">
+        <div className="relative">
+            <select 
+                value={selectedClassId} 
+                onChange={(e) => setSelectedClassId(e.target.value)}
+                className="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2 pr-10 text-xs font-black text-slate-600 outline-none focus:border-[#2563EB] transition-all shadow-sm"
+            >
+                <option value="all">All Classes</option>
+                {classes.map(c => (
+                    <option key={c.id} value={c.id}>{c.class_name}</option>
+                ))}
+            </select>
+            <Filter size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
         </div>
       </div>
 
-      <div className="space-y-3">
-        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">Performance Insights</h3>
-        {insights.map((item, idx) => (
-          <div key={idx} className="bg-white p-4 rounded-[1.8rem] border border-slate-100 shadow-bubble flex items-center justify-between">
-            <div className="flex items-center gap-4 min-w-0">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                item.status === 'improving' ? 'bg-emerald-50 text-emerald-500' : item.status === 'declining' ? 'bg-red-50 text-red-500' : 'bg-slate-50 text-slate-400'
-              }`}>
-                {item.status === 'improving' ? <TrendingUp size={20} /> : item.status === 'declining' ? <TrendingDown size={20} /> : <Award size={20} />}
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-black text-[#1E3A8A] text-sm font-noto truncate">{item.student_name}</h4>
-                <p className="text-[9px] font-bold text-slate-400 uppercase">{item.class_name} • Roll: {item.roll}</p>
-              </div>
+      {/* Overall Stats */}
+      <div className="bg-[#1E3A8A] p-6 rounded-[2.5rem] text-white shadow-premium relative overflow-hidden">
+         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+         <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-2 opacity-80">
+               <Award size={20} />
+               <span className="text-[10px] font-black uppercase tracking-widest">Overall Performance</span>
             </div>
-            <div className="text-right">
-              <div className={`text-xs font-black ${item.status === 'improving' ? 'text-emerald-500' : item.status === 'declining' ? 'text-red-500' : 'text-slate-400'}`}>
-                {item.change > 0 ? '+' : ''}{item.change}%
-              </div>
-              <p className="text-[8px] font-bold text-slate-300 uppercase">Avg: {item.current_avg}%</p>
-            </div>
-          </div>
-        ))}
-        {insights.length === 0 && (
-          <div className="text-center py-10 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
-            <AlertCircle size={32} className="mx-auto text-slate-300 mb-2" />
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Not enough data for insights</p>
-          </div>
-        )}
+            <h2 className="text-4xl font-black font-noto">{analytics.overallAvg.toFixed(1)}%</h2>
+            <p className="text-xs font-bold opacity-60 mt-1">Average score across all classes</p>
+         </div>
       </div>
+
+      {/* Class Performance */}
+      <div className="space-y-3">
+         <div className="flex items-center gap-2 px-2">
+            <BarChart2 size={16} className="text-slate-400" />
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Class Performance</h3>
+         </div>
+         <div className="grid grid-cols-1 gap-3">
+            {analytics.classPerformance.map((cls, idx) => (
+               <div key={idx} className="bg-white p-4 rounded-[1.8rem] border border-slate-100 shadow-bubble flex items-center justify-between">
+                  <div>
+                     <h4 className="font-black text-[#1E3A8A] text-sm">{cls.class_name}</h4>
+                     <p className="text-[9px] font-bold text-slate-400 flex items-center gap-1 mt-0.5"><Users size={10}/> {cls.student_count} Students</p>
+                  </div>
+                  <div className="text-right">
+                     <span className={`text-lg font-black ${parseFloat(cls.average) >= 80 ? 'text-emerald-500' : parseFloat(cls.average) >= 60 ? 'text-blue-500' : 'text-orange-500'}`}>
+                        {cls.average}%
+                     </span>
+                  </div>
+               </div>
+            ))}
+            {analytics.classPerformance.length === 0 && <div className="text-center py-6 text-slate-400 text-xs font-bold">No data available</div>}
+         </div>
+      </div>
+
+      {/* Subject Weakness */}
+      <div className="space-y-3">
+         <div className="flex items-center gap-2 px-2">
+            <AlertCircle size={16} className="text-red-400" />
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Subject Weakness Detection</h3>
+         </div>
+         <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble">
+            <div className="space-y-4">
+               {analytics.subjectWeakness.map((sub, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                     <div className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center font-black text-xs shrink-0">
+                        {idx + 1}
+                     </div>
+                     <div className="flex-1">
+                        <div className="flex justify-between mb-1">
+                           <span className="text-xs font-black text-[#1E3A8A]">{sub.name}</span>
+                           <span className="text-xs font-black text-red-500">{sub.average.toFixed(1)}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                           <div className="h-full bg-red-500 rounded-full" style={{ width: `${sub.average}%` }}></div>
+                        </div>
+                     </div>
+                  </div>
+               ))}
+               {analytics.subjectWeakness.length === 0 && <div className="text-center py-4 text-slate-400 text-xs font-bold">No weakness detected</div>}
+            </div>
+         </div>
+      </div>
+
+      {/* Improvement Tracking */}
+      <div className="space-y-3">
+         <div className="flex items-center gap-2 px-2">
+            <TrendingUp size={16} className="text-emerald-500" />
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Top Movers (Improvement/Decline)</h3>
+         </div>
+         <div className="space-y-3">
+            {analytics.improvementInsights.map((item, idx) => (
+               <div key={idx} className="bg-white p-4 rounded-[1.8rem] border border-slate-100 shadow-bubble flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.status === 'improving' ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}>
+                        {item.status === 'improving' ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
+                     </div>
+                     <div>
+                        <h4 className="font-black text-[#1E3A8A] text-sm font-noto">{item.student_name}</h4>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">{item.class_name}</p>
+                     </div>
+                  </div>
+                  <div className="text-right">
+                     <span className={`text-sm font-black ${item.status === 'improving' ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {item.change > 0 ? '+' : ''}{item.change}%
+                     </span>
+                     <p className="text-[9px] font-bold text-slate-300">Avg: {item.current_avg}%</p>
+                  </div>
+               </div>
+            ))}
+            {analytics.improvementInsights.length === 0 && <div className="text-center py-6 text-slate-400 text-xs font-bold">Not enough exam data for comparison</div>}
+         </div>
+      </div>
+
     </div>
   );
 };

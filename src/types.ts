@@ -143,6 +143,21 @@ export interface Fee {
   students?: Student;
 }
 
+export interface ExamRoom {
+  id: string;
+  room_name: string;
+  capacity: number;
+}
+
+export interface SeatAssignment {
+  student_id: string;
+  student_name: string;
+  class_name: string;
+  roll: number;
+  room_name: string;
+  seat_number: number;
+}
+
 export interface FinalResult {
   id: string;
   madrasah_id: string;
