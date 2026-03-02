@@ -6,6 +6,7 @@ import { Calculator, Plus, ArrowUpCircle, ArrowDownCircle, Wallet, History, User
 import { t } from 'translations';
 import { sortMadrasahClasses } from 'pages/Classes';
 import SmartFeeAnalytics from 'components/SmartFeeAnalytics';
+import { generateClassFeeReportPDF } from '../utils/pdfGenerator';
 
 interface AccountingProps {
   lang: Language;
@@ -261,33 +262,13 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
 
     const className = classes.find(c => c.id === selectedClass)?.class_name || 'All Classes';
 
-    const payload = {
-      className,
-      month: selectedMonth,
-      students: feesReport,
-      madrasah: { name: madrasah.name }
-    };
-
     try {
-      const response = await fetch('/api/pdf/class-fees', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `class-fees-${className}-${selectedMonth}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        alert('Failed to generate PDF');
-      }
+      generateClassFeeReportPDF(
+          className,
+          selectedMonth,
+          feesReport,
+          { name: madrasah.name }
+      );
     } catch (error) {
       console.error('Download error:', error);
       alert('Error downloading PDF');

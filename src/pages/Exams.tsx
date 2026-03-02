@@ -6,6 +6,7 @@ import { GraduationCap, Plus, ChevronRight, BookOpen, Trophy, Save, X, Edit3, Tr
 import { t } from 'translations';
 import { sortMadrasahClasses } from 'pages/Classes';
 import SmartResultAnalytics from 'components/SmartResultAnalytics';
+import { generateAdmitCardPDF, generateSeatPlanPDF, generateResultPDF, generateClassResultPDF } from '../utils/pdfGenerator';
 
 interface ExamsProps {
   lang: Language;
@@ -152,34 +153,14 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
         return;
     }
 
-    const payload = {
-        exam: examForAdmitCard,
-        students: stds,
-        madrasah: { name: madrasah.name, logo_url: madrasah.logo_url },
-        templateId: selectedAdmitCardTemplate
-    };
-
     try {
-        const response = await fetch('/api/pdf/admit-card', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `admit-cards-${examForAdmitCard.exam_name}-${selectedAdmitCardTemplate}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            setShowAdmitCardModal(false);
-        } else {
-            alert('Failed to generate Admit Cards');
-        }
+        await generateAdmitCardPDF(
+            examForAdmitCard,
+            stds,
+            { name: madrasah.name, logo_url: madrasah.logo_url },
+            selectedAdmitCardTemplate
+        );
+        setShowAdmitCardModal(false);
     } catch (error) {
         console.error('Download error:', error);
         alert('Error downloading Admit Cards');
@@ -243,32 +224,12 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
   const handleDownloadSeatPlan = async () => {
       if (seatAssignments.length === 0) return;
       
-      const payload = {
-          assignments: seatAssignments,
-          madrasah: { name: madrasah?.name },
-          templateId: selectedSeatPlanTemplate
-      };
-
       try {
-        const response = await fetch('/api/pdf/seat-plan', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `seat-plan-${selectedSeatPlanTemplate}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        } else {
-            alert('Failed to generate PDF');
-        }
+        await generateSeatPlanPDF(
+            seatAssignments,
+            { name: madrasah?.name || 'Madrasah' },
+            selectedSeatPlanTemplate
+        );
       } catch (e) {
           console.error(e);
           alert('Error downloading Seat Plan');
@@ -351,44 +312,13 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
       marks_obtained: m.marks_obtained
     }));
 
-    // Fetch class name if not present
-    let className = selectedExam.classes?.class_name;
-    if (!className) {
-        const { data: cls } = await supabase.from('classes').select('class_name').eq('id', selectedExam.class_id).single();
-        className = cls?.class_name;
-    }
-
-    const payload = {
-      student: {
-        student_name: student.student_name,
-        roll: student.roll,
-        classes: { class_name: className }
-      },
-      exam: { exam_name: selectedExam.exam_name },
-      marks: formattedMarks,
-      madrasah: { name: madrasah.name }
-    };
-
     try {
-      const response = await fetch('/api/pdf/result', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `result-${student.roll}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        alert('Failed to generate PDF');
-      }
+      generateResultPDF(
+          student,
+          selectedExam,
+          formattedMarks,
+          { name: madrasah.name }
+      );
     } catch (error) {
       console.error('Download error:', error);
       alert('Error downloading PDF');
@@ -403,34 +333,14 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
         await fetchMarkEntryData(selectedExam.id, selectedExam.class_id);
     }
 
-    const payload = {
-      exam: selectedExam,
-      subjects: subjects,
-      students: students, // Ensure students are fetched via fetchMarkEntryData
-      marksData: marksData,
-      madrasah: { name: madrasah.name }
-    };
-
     try {
-      const response = await fetch('/api/pdf/class-result', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `result-${selectedExam.exam_name}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        alert('Failed to generate PDF');
-      }
+      generateClassResultPDF(
+          selectedExam,
+          subjects,
+          students,
+          marksData,
+          { name: madrasah.name }
+      );
     } catch (error) {
       console.error('Download error:', error);
       alert('Error downloading PDF');

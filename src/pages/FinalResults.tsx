@@ -3,6 +3,7 @@ import { supabase } from 'supabase';
 import { Madrasah, Class, Exam, FinalResult, FinalResultExam, Language, UserRole, Student } from 'types';
 import { ArrowLeft, Plus, Save, Trash2, Download, Loader2, Calculator, Check, X, AlertCircle } from 'lucide-react';
 import { t } from 'translations';
+import { generateFinalResultPDF } from '../utils/pdfGenerator';
 
 interface FinalResultsProps {
   lang: Language;
@@ -225,34 +226,14 @@ const FinalResults: React.FC<FinalResultsProps> = ({ lang, madrasah, onBack, rol
   const handleDownloadPDF = async () => {
     if (!viewResult || !madrasah) return;
 
-    const payload = {
-      title: viewResult.title,
-      className: classes.find(c => c.id === viewResult.class_id)?.class_name,
-      subjects,
-      students: calculatedData,
-      madrasah: { name: madrasah.name }
-    };
-
     try {
-      const response = await fetch('/api/pdf/final-result', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `final-result-${viewResult.title}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        alert('Failed to generate PDF');
-      }
+      generateFinalResultPDF(
+          viewResult.title,
+          classes.find(c => c.id === viewResult.class_id)?.class_name || '',
+          subjects,
+          calculatedData,
+          { name: madrasah.name }
+      );
     } catch (error) {
       console.error('Download error:', error);
       alert('Error downloading PDF');
