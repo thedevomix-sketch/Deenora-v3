@@ -280,7 +280,10 @@ const Attendance: React.FC<AttendanceProps> = ({ lang, madrasah, onBack, userId 
             ) : (
                 <div className="space-y-4 animate-in slide-in-from-bottom-5">
                     {reportData.length > 0 ? reportData.map((item: any) => {
-                        const pct = item.total_days > 0 ? Math.round((item.present_days / item.total_days) * 100) : 0;
+                        const late = item.late_days || (item.total_days - item.present_days - item.absent_days);
+                        const pct = item.total_days > 0 ? Math.round(((item.present_days + late) / item.total_days) * 100) : 0;
+                        const latePct = item.total_days > 0 ? Math.round((late / item.total_days) * 100) : 0;
+                        
                         return (
                             <div key={item.student_id} className="bg-white/95 p-6 rounded-[2.5rem] border border-white shadow-lg space-y-4 group">
                                 <div className="flex items-center justify-between">
@@ -300,7 +303,10 @@ const Attendance: React.FC<AttendanceProps> = ({ lang, madrasah, onBack, userId 
                                    <div className="bg-slate-50/50 p-2.5 rounded-xl text-center border border-slate-50"><p className="text-[8px] font-black text-slate-400 uppercase mb-0.5">Total</p><p className="font-black text-[#2E0B5E] text-sm">{item.total_days}</p></div>
                                    <div className="bg-green-50/50 p-2.5 rounded-xl text-center border border-green-50"><p className="text-[8px] font-black text-green-400 uppercase mb-0.5">Present</p><p className="font-black text-green-600 text-sm">{item.present_days}</p></div>
                                    <div className="bg-red-50/50 p-2.5 rounded-xl text-center border border-red-50"><p className="text-[8px] font-black text-red-400 uppercase mb-0.5">Absent</p><p className="font-black text-red-600 text-sm">{item.absent_days}</p></div>
-                                   <div className="bg-amber-50/50 p-2.5 rounded-xl text-center border border-amber-50"><p className="text-[8px] font-black text-amber-400 uppercase mb-0.5">Late</p><p className="font-black text-amber-600 text-sm">{item.late_days || (item.total_days - item.present_days - item.absent_days)}</p></div>
+                                   <div className="bg-amber-50/50 p-2.5 rounded-xl text-center border border-amber-50">
+                                      <p className="text-[8px] font-black text-amber-400 uppercase mb-0.5">Late</p>
+                                      <p className="font-black text-amber-600 text-sm">{late} ({latePct}%)</p>
+                                   </div>
                                 </div>
                             </div>
                         );

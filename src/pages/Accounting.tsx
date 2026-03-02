@@ -300,48 +300,48 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
 
       {activeTab === 'fees' && (
         <div className="space-y-4 animate-in slide-in-from-bottom-5">
-           <div className="bg-white p-5 rounded-[2.2rem] border border-slate-100 shadow-bubble space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                 <div className="relative">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 mb-1 block">শ্রেণি</label>
-                    <button onClick={() => setShowClassDropdown(!showClassDropdown)} className="w-full h-12 px-4 rounded-xl border bg-slate-50 flex items-center justify-between text-xs font-black">
-                       <span className="truncate">{classes.find(c => c.id === selectedClass)?.class_name || 'সব শ্রেণি'}</span>
-                       <ChevronDown size={16} />
+           <div className="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-bubble space-y-4">
+              <div className="flex flex-wrap gap-3 items-center justify-between">
+                 {/* Class Selector */}
+                 <div className="relative flex-1 min-w-[140px]">
+                    <button onClick={() => setShowClassDropdown(!showClassDropdown)} className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between group active:scale-[0.98] transition-all">
+                       <span className="text-[11px] font-black text-[#1E3A8A] truncate">{classes.find(c => c.id === selectedClass)?.class_name || 'সব শ্রেণি'}</span>
+                       <ChevronDown size={16} className="text-slate-400 group-hover:text-[#2563EB] transition-colors" />
                     </button>
                     {showClassDropdown && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border z-50 p-1 max-h-40 overflow-y-auto">
-                            <button onClick={() => { setSelectedClass(''); setShowClassDropdown(false); }} className="w-full text-left px-3 py-2 text-[10px] font-black uppercase hover:bg-slate-50">সব শ্রেণি</button>
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 z-50 p-1 max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                            <button onClick={() => { setSelectedClass(''); setShowClassDropdown(false); }} className="w-full text-left px-3 py-2.5 rounded-lg text-[11px] font-black text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] transition-colors">সব শ্রেণি</button>
                             {classes.map(c => (
-                                <button key={c.id} onClick={() => { setSelectedClass(c.id); setShowClassDropdown(false); }} className="w-full text-left px-3 py-2 text-[10px] font-black uppercase hover:bg-slate-50">{c.class_name}</button>
+                                <button key={c.id} onClick={() => { setSelectedClass(c.id); setShowClassDropdown(false); }} className="w-full text-left px-3 py-2.5 rounded-lg text-[11px] font-black text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] transition-colors">{c.class_name}</button>
                             ))}
                         </div>
                     )}
                  </div>
-                 <div className="relative">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 mb-1 block">মাস</label>
-                    <input type="month" className="w-full h-12 px-4 bg-slate-50 border rounded-xl text-xs font-black outline-none" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+
+                 {/* Month Selector */}
+                 <div className="relative flex-1 min-w-[140px]">
+                    <input type="month" className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/30 transition-all" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
                  </div>
-                 <div className="relative col-span-2 md:col-span-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 mb-1 block">পেমেন্ট স্ট্যাটাস</label>
-                     <div className="flex gap-2">
-                         <div className="relative flex-1">
-                             <select
+
+                 {/* Status Filter */}
+                 <div className="relative flex-1 min-w-[140px]">
+                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value as any)}
-                        className="w-full h-12 px-4 bg-slate-50 border rounded-xl text-xs font-black outline-none appearance-none"
+                        className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-black text-[#1E3A8A] outline-none appearance-none focus:border-[#2563EB]/30 transition-all"
                     >
-                        <option value="all">সব (All)</option>
+                        <option value="all">সব স্ট্যাটাস</option>
                         <option value="paid">পরিশোধিত (Paid)</option>
                         <option value="partial">আংশিক (Partial)</option>
                         <option value="unpaid">বকেয়া (Unpaid)</option>
                     </select>
-                             <ChevronDown className="absolute right-3 top-[1.1rem] text-slate-400 pointer-events-none" size={16}/>
-                         </div>
-                         <button onClick={handleDownloadClassReport} className="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center border hover:bg-blue-50 hover:text-blue-500 transition-colors">
-                             <Download size={20} />
-                         </button>
-                     </div>
+                    <ChevronDown className="absolute right-3 top-3.5 text-slate-400 pointer-events-none" size={16}/>
                  </div>
+
+                 {/* Download Button */}
+                 <button onClick={handleDownloadClassReport} className="w-11 h-11 bg-white text-slate-400 rounded-xl flex items-center justify-center border border-slate-100 shadow-sm hover:bg-blue-50 hover:text-[#2563EB] hover:border-blue-100 active:scale-95 transition-all" title="Download Report">
+                     <Download size={20} />
+                 </button>
               </div>
            </div>
 
