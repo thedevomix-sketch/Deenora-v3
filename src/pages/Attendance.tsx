@@ -296,10 +296,11 @@ const Attendance: React.FC<AttendanceProps> = ({ lang, madrasah, onBack, userId 
                                 <div className="w-full h-3 bg-slate-50 rounded-full overflow-hidden border border-slate-100 flex shadow-inner">
                                     <div className="h-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.3)]" style={{ width: `${pct}%` }}></div>
                                 </div>
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-4 gap-2">
                                    <div className="bg-slate-50/50 p-2.5 rounded-xl text-center border border-slate-50"><p className="text-[8px] font-black text-slate-400 uppercase mb-0.5">Total</p><p className="font-black text-[#2E0B5E] text-sm">{item.total_days}</p></div>
                                    <div className="bg-green-50/50 p-2.5 rounded-xl text-center border border-green-50"><p className="text-[8px] font-black text-green-400 uppercase mb-0.5">Present</p><p className="font-black text-green-600 text-sm">{item.present_days}</p></div>
                                    <div className="bg-red-50/50 p-2.5 rounded-xl text-center border border-red-50"><p className="text-[8px] font-black text-red-400 uppercase mb-0.5">Absent</p><p className="font-black text-red-600 text-sm">{item.absent_days}</p></div>
+                                   <div className="bg-amber-50/50 p-2.5 rounded-xl text-center border border-amber-50"><p className="text-[8px] font-black text-amber-400 uppercase mb-0.5">Late</p><p className="font-black text-amber-600 text-sm">{item.late_days || (item.total_days - item.present_days - item.absent_days)}</p></div>
                                 </div>
                             </div>
                         );
