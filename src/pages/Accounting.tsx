@@ -316,6 +316,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
               lang={lang} 
               month={selectedMonth} 
               refreshKey={refreshKey}
+              classes={classes}
             />
           )}
         </div>

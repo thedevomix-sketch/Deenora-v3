@@ -1,40 +1,143 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from 'supabase';
-import { Language } from 'types';
+import { Language, Class } from 'types';
 import { t } from 'translations';
-import { TrendingUp, DollarSign, BarChart3, AlertCircle, Send, Loader2, CheckCircle2, MessageSquare, Smartphone, PieChart, Users } from 'lucide-react';
+import { TrendingUp, DollarSign, BarChart3, AlertCircle, Send, Loader2, CheckCircle2, MessageSquare, Smartphone, PieChart, Users, Filter, Calendar } from 'lucide-react';
 
 interface SmartFeeAnalyticsProps {
   madrasahId: string;
   lang: Language;
   month: string;
   refreshKey?: number;
+  classes?: Class[];
 }
 
-const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang, month, refreshKey }) => {
+const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang, month: initialMonth, refreshKey, classes = [] }) => {
   const [stats, setStats] = useState<any>(null);
   const [reminders, setReminders] = useState<any[]>([]);
   const [breakdown, setBreakdown] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
+  // Filters
+  const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('monthly');
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [selectedClassId, setSelectedClassId] = useState<string>('all');
+
   useEffect(() => {
     fetchAnalytics();
-  }, [madrasahId, month, refreshKey]);
+  }, [madrasahId, selectedMonth, selectedYear, viewMode, selectedClassId, refreshKey]);
 
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const [statsRes, remindersRes] = await Promise.all([
-        supabase.rpc('get_smart_fee_analytics', { p_madrasah_id: madrasahId, p_month: month }),
-        supabase.rpc('get_fee_reminder_list', { p_madrasah_id: madrasahId, p_month: month })
-      ]);
+      // Determine date filter for ledger
+      const dateFilter = viewMode === 'monthly' ? selectedMonth : selectedYear;
 
-      if (statsRes.data) setStats(statsRes.data);
-      if (remindersRes.data) setReminders(remindersRes.data);
+      // 1. Fetch Fee Structures
+      let structureQuery = supabase.from('fee_structures').select('*').eq('madrasah_id', madrasahId);
+      if (selectedClassId !== 'all') {
+        structureQuery = structureQuery.eq('class_id', selectedClassId);
+      }
+      const { data: structures } = await structureQuery;
+      if (!structures) return;
 
-      await fetchBreakdown();
+      // 2. Fetch Students for counts and class mapping
+      let studentQuery = supabase.from('students').select('student_name, class_id').eq('madrasah_id', madrasahId);
+      if (selectedClassId !== 'all') {
+        studentQuery = studentQuery.eq('class_id', selectedClassId);
+      }
+      const { data: students } = await studentQuery;
+      
+      const studentCounts: Record<string, number> = {};
+      const studentClassMap: Record<string, string> = {};
+      
+      students?.forEach(s => {
+        studentCounts[s.class_id] = (studentCounts[s.class_id] || 0) + 1;
+        studentClassMap[s.student_name] = s.class_id;
+      });
+
+      // 3. Fetch Ledger for transaction counts
+      const { data: ledger } = await supabase.from('ledger')
+        .select('description, amount')
+        .eq('madrasah_id', madrasahId)
+        .eq('type', 'income')
+        .eq('category', 'Student Fee')
+        .ilike('transaction_date', `${dateFilter}%`);
+
+      // 4. Process Data
+      const breakdownMap: Record<string, { expected: number, collected: number, students: number, transactions: number }> = {};
+      let totalExpected = 0;
+      let totalCollected = 0;
+
+      structures.forEach(s => {
+        const count = studentCounts[s.class_id] || 0;
+        // If yearly, multiply monthly fee by 12 (approximate)
+        const multiplier = viewMode === 'yearly' ? 12 : 1;
+        const total = count * s.amount * multiplier;
+        
+        if (!breakdownMap[s.fee_name]) {
+          breakdownMap[s.fee_name] = { expected: 0, collected: 0, students: 0, transactions: 0 };
+        }
+        breakdownMap[s.fee_name].expected += total;
+        breakdownMap[s.fee_name].students += count;
+        totalExpected += total;
+      });
+
+      // Count transactions and calculate collected amount
+      ledger?.forEach(l => {
+        const parts = l.description.split(' - ');
+        if (parts.length < 2) return;
+
+        const feePart = parts[0];
+        const studentInfo = parts.slice(1).join(' - ');
+        const studentName = studentInfo.split(' (')[0];
+        // If filtering by class, ensure student belongs to selected class
+        const classId = studentClassMap[studentName];
+        if (selectedClassId !== 'all' && classId !== selectedClassId) return;
+
+        const fees = feePart.split(', ');
+        fees.forEach(f => {
+          if (breakdownMap[f]) {
+            breakdownMap[f].transactions += 1;
+            
+            if (classId) {
+               const structure = structures.find(s => s.fee_name === f && s.class_id === classId);
+               if (structure) {
+                   // Add actual collected amount for this fee item
+                   breakdownMap[f].collected += structure.amount;
+                   totalCollected += structure.amount;
+               }
+            }
+          }
+        });
+      });
+
+      const breakdownList = Object.entries(breakdownMap).map(([name, data]) => ({ name, ...data }));
+      setBreakdown(breakdownList);
+
+      // Set Stats
+      setStats({
+        expected_income: totalExpected,
+        prediction: totalCollected,
+        collection_rate: totalExpected > 0 ? ((totalCollected / totalExpected) * 100).toFixed(1) : 0
+      });
+
+      // Fetch reminders only for monthly view (current dues)
+      if (viewMode === 'monthly') {
+        const { data: remindersData } = await supabase.rpc('get_fee_reminder_list', { p_madrasah_id: madrasahId, p_month: selectedMonth });
+        if (remindersData) {
+            // Filter reminders by class if selected
+            const filteredReminders = selectedClassId !== 'all' 
+                ? remindersData.filter((r: any) => r.class_name === classes.find(c => c.id === selectedClassId)?.class_name)
+                : remindersData;
+            setReminders(filteredReminders);
+        }
+      } else {
+        setReminders([]);
+      }
 
     } catch (err) {
       console.error('Smart Fee Analytics Error:', err);
@@ -43,77 +146,12 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
     }
   };
 
-  const fetchBreakdown = async () => {
-    // 1. Fetch Fee Structures
-    const { data: structures } = await supabase.from('fee_structures').select('*').eq('madrasah_id', madrasahId);
-    if (!structures) return;
-
-    // 2. Fetch Students for counts and class mapping
-    const { data: students } = await supabase.from('students').select('student_name, class_id').eq('madrasah_id', madrasahId);
-    const studentCounts: Record<string, number> = {};
-    const studentClassMap: Record<string, string> = {};
-    
-    students?.forEach(s => {
-      studentCounts[s.class_id] = (studentCounts[s.class_id] || 0) + 1;
-      studentClassMap[s.student_name] = s.class_id;
-    });
-
-    // 3. Fetch Ledger for transaction counts
-    const { data: ledger } = await supabase.from('ledger')
-      .select('description, amount')
-      .eq('madrasah_id', madrasahId)
-      .eq('type', 'income')
-      .eq('category', 'Student Fee')
-      .ilike('transaction_date', `${month}%`);
-
-    // 4. Process Data
-    const breakdownMap: Record<string, { expected: number, collected: number, students: number, transactions: number }> = {};
-
-    structures.forEach(s => {
-      const count = studentCounts[s.class_id] || 0;
-      const total = count * s.amount;
-      
-      if (!breakdownMap[s.fee_name]) {
-        breakdownMap[s.fee_name] = { expected: 0, collected: 0, students: 0, transactions: 0 };
-      }
-      breakdownMap[s.fee_name].expected += total;
-      breakdownMap[s.fee_name].students += count;
-    });
-
-    // Count transactions and calculate collected amount
-    ledger?.forEach(l => {
-      const parts = l.description.split(' - ');
-      if (parts.length < 2) return;
-
-      const feePart = parts[0];
-      const studentInfo = parts.slice(1).join(' - ');
-      const studentName = studentInfo.split(' (')[0];
-      const classId = studentClassMap[studentName];
-
-      const fees = feePart.split(', ');
-      fees.forEach(f => {
-        if (breakdownMap[f]) {
-          breakdownMap[f].transactions += 1;
-          
-          if (classId) {
-             const structure = structures.find(s => s.fee_name === f && s.class_id === classId);
-             if (structure) {
-                 breakdownMap[f].collected += structure.amount;
-             }
-          }
-        }
-      });
-    });
-
-    setBreakdown(Object.entries(breakdownMap).map(([name, data]) => ({ name, ...data })));
-  };
-
   const sendBulkReminder = async (type: 'native' | 'system') => {
     if (reminders.length === 0) return;
     
     if (type === 'native') {
       const phones = reminders.map(r => r.guardian_phone).join(',');
-      const body = `আস-সালামু আলাইকুম, আপনার সন্তানের ${month} মাসের বকেয়া ফি ৳${reminders[0].balance_due} দ্রুত পরিশোধ করার জন্য অনুরোধ করা হলো।`;
+      const body = `আস-সালামু আলাইকুম, আপনার সন্তানের ${selectedMonth} মাসের বকেয়া ফি ৳${reminders[0].balance_due} দ্রুত পরিশোধ করার জন্য অনুরোধ করা হলো।`;
       window.location.href = `sms:${phones}?body=${encodeURIComponent(body)}`;
     } else {
       // System SMS logic would go here
@@ -129,6 +167,60 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-wrap gap-4 items-center justify-between">
+        <div className="flex items-center gap-2">
+            <div className="flex bg-slate-100 p-1 rounded-xl">
+                <button 
+                    onClick={() => setViewMode('monthly')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${viewMode === 'monthly' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    Monthly
+                </button>
+                <button 
+                    onClick={() => setViewMode('yearly')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${viewMode === 'yearly' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    Yearly
+                </button>
+            </div>
+            
+            {viewMode === 'monthly' ? (
+                <input 
+                    type="month" 
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+            ) : (
+                <select 
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+                        <option key={y} value={y}>{y}</option>
+                    ))}
+                </select>
+            )}
+        </div>
+
+        <div className="flex items-center gap-2">
+            <Filter size={16} className="text-slate-400" />
+            <select 
+                value={selectedClassId}
+                onChange={(e) => setSelectedClassId(e.target.value)}
+                className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-w-[150px]"
+            >
+                <option value="all">All Classes</option>
+                {classes.map(c => (
+                    <option key={c.id} value={c.id}>{c.class_name}</option>
+                ))}
+            </select>
+        </div>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-bubble">
@@ -146,7 +238,7 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
             <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-xl flex items-center justify-center">
               <TrendingUp size={20} />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('predicted_total', lang)}</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{viewMode === 'yearly' ? 'Total Collected' : t('predicted_total', lang)}</p>
           </div>
           <h3 className="text-2xl font-black text-[#1E3A8A]">৳ {stats?.prediction?.toLocaleString('bn-BD')}</h3>
           <div className="mt-2 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -175,7 +267,7 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
            <div className="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center">
               <PieChart size={20} />
            </div>
-           <h3 className="text-lg font-black text-[#1E3A8A] font-noto">ফি ব্রেকডাউন</h3>
+           <h3 className="text-lg font-black text-[#1E3A8A] font-noto">ফি ব্রেকডাউন ({viewMode === 'monthly' ? selectedMonth : selectedYear})</h3>
         </div>
         
         <div className="space-y-3">
@@ -200,55 +292,57 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
         </div>
       </div>
 
-      {/* Reminders Section */}
-      <div className="bg-white p-8 rounded-[2.5rem] text-[#1E293B] shadow-bubble border border-slate-100 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-black font-noto">{t('reminders', lang)}</h3>
-            <p className="text-[10px] font-black uppercase opacity-60 tracking-widest">{reminders.length} Students Pending</p>
-          </div>
-          <div className="w-12 h-12 bg-blue-50 text-[#2563EB] rounded-2xl flex items-center justify-center border border-blue-100">
-            <AlertCircle size={24} />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <button 
-            onClick={() => sendBulkReminder('system')}
-            className="h-14 bg-[#2563EB] text-white rounded-2xl font-black text-[10px] uppercase shadow-premium flex items-center justify-center gap-2 active:scale-95 transition-all"
-          >
-            <MessageSquare size={16} fill="currentColor" /> {t('system_sms', lang)}
-          </button>
-          <button 
-            onClick={() => sendBulkReminder('native')}
-            className="h-14 bg-slate-50 text-slate-600 rounded-2xl font-black text-[10px] uppercase border border-slate-200 flex items-center justify-center gap-2 active:scale-95 transition-all"
-          >
-            <Smartphone size={16} fill="currentColor" /> {t('native_sms', lang)}
-          </button>
-        </div>
-
-        <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-          {reminders.map((r, idx) => (
-            <div key={idx} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
-              <div className="min-w-0">
-                <h4 className="font-black text-[#1E3A8A] text-sm font-noto truncate">{r.student_name}</h4>
-                <p className="text-[9px] font-bold opacity-60 uppercase">{r.class_name} • Due: ৳{r.balance_due}</p>
-              </div>
-              <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase ${
-                r.reminder_type === 'final' ? 'bg-red-500 text-white' : r.reminder_type === 'strong' ? 'bg-orange-500 text-white' : 'bg-blue-500 text-white'
-              }`}>
-                {r.reminder_type === 'final' ? t('final_warning', lang) : r.reminder_type === 'strong' ? t('strong_reminder', lang) : t('soft_reminder', lang)}
-              </span>
+      {/* Reminders Section - Only show for Monthly View */}
+      {viewMode === 'monthly' && (
+        <div className="bg-white p-8 rounded-[2.5rem] text-[#1E293B] shadow-bubble border border-slate-100 space-y-6">
+            <div className="flex items-center justify-between">
+            <div>
+                <h3 className="text-xl font-black font-noto">{t('reminders', lang)}</h3>
+                <p className="text-[10px] font-black uppercase opacity-60 tracking-widest">{reminders.length} Students Pending</p>
             </div>
-          ))}
-          {reminders.length === 0 && (
-            <div className="text-center py-10 opacity-40">
-              <CheckCircle2 size={32} className="mx-auto mb-2" />
-              <p className="text-[10px] font-black uppercase tracking-widest">All fees collected!</p>
+            <div className="w-12 h-12 bg-blue-50 text-[#2563EB] rounded-2xl flex items-center justify-center border border-blue-100">
+                <AlertCircle size={24} />
             </div>
-          )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+            <button 
+                onClick={() => sendBulkReminder('system')}
+                className="h-14 bg-[#2563EB] text-white rounded-2xl font-black text-[10px] uppercase shadow-premium flex items-center justify-center gap-2 active:scale-95 transition-all"
+            >
+                <MessageSquare size={16} fill="currentColor" /> {t('system_sms', lang)}
+            </button>
+            <button 
+                onClick={() => sendBulkReminder('native')}
+                className="h-14 bg-slate-50 text-slate-600 rounded-2xl font-black text-[10px] uppercase border border-slate-200 flex items-center justify-center gap-2 active:scale-95 transition-all"
+            >
+                <Smartphone size={16} fill="currentColor" /> {t('native_sms', lang)}
+            </button>
+            </div>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+            {reminders.map((r, idx) => (
+                <div key={idx} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                <div className="min-w-0">
+                    <h4 className="font-black text-[#1E3A8A] text-sm font-noto truncate">{r.student_name}</h4>
+                    <p className="text-[9px] font-bold opacity-60 uppercase">{r.class_name} • Due: ৳{r.balance_due}</p>
+                </div>
+                <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase ${
+                    r.reminder_type === 'final' ? 'bg-red-500 text-white' : r.reminder_type === 'strong' ? 'bg-orange-500 text-white' : 'bg-blue-500 text-white'
+                }`}>
+                    {r.reminder_type === 'final' ? t('final_warning', lang) : r.reminder_type === 'strong' ? t('strong_reminder', lang) : t('soft_reminder', lang)}
+                </span>
+                </div>
+            ))}
+            {reminders.length === 0 && (
+                <div className="text-center py-10 opacity-40">
+                <CheckCircle2 size={32} className="mx-auto mb-2" />
+                <p className="text-[10px] font-black uppercase tracking-widest">All fees collected!</p>
+                </div>
+            )}
+            </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
