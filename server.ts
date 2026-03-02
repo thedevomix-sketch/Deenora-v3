@@ -233,6 +233,220 @@ async function startServer() {
       doc.text(totalPayable.toString(), 250, y);
       doc.text(totalPaid.toString(), 320, y);
       doc.text(totalDue.toString(), 390, y);
+      doc.text(totalDue.toString(), 390, y);
+
+      doc.end();
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      res.status(500).send('Error generating PDF');
+    }
+  });
+
+  app.post('/api/pdf/class-result', async (req, res) => {
+    try {
+      const { exam, subjects, students, marksData, madrasah } = req.body;
+      
+      const doc = new PDFDocument({ size: 'A4', margin: 30, layout: 'landscape' });
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=result-${exam.exam_name}.pdf`);
+      
+      doc.pipe(res);
+
+      if (fontBuffer) {
+        doc.font(fontBuffer);
+      } else {
+        doc.font('Helvetica');
+      }
+
+      // --- HEADER DESIGN ---
+      // Background for header
+      doc.rect(0, 0, 842, 100).fill('#1E3A8A');
+      
+      // Madrasah Name
+      doc.fillColor('white');
+      doc.fontSize(24).text(madrasah.name || 'Madrasah Name', 0, 30, { align: 'center' });
+      
+      // Exam Name & Date
+      doc.fontSize(14).text(`${exam.exam_name} | ${new Date().toLocaleDateString()}`, 0, 65, { align: 'center' });
+      
+      // Reset color
+      doc.fillColor('black');
+      doc.moveDown(4);
+
+      // --- TABLE CONFIGURATION ---
+      const startX = 30;
+      const startY = 130;
+      let currentY = startY;
+      const rowHeight = 30;
+      
+      // Dynamic Column Widths
+      const rollWidth = 50;
+      const nameWidth = 150;
+      const totalWidth = 60;
+      const gpaWidth = 50;
+      const gradeWidth = 50;
+      
+      // Calculate remaining width for subjects
+      const fixedWidth = rollWidth + nameWidth + totalWidth + gpaWidth + gradeWidth;
+      const availableWidth = 842 - 60 - fixedWidth; // Page width - margins - fixed columns
+      const subjectWidth = Math.max(60, availableWidth / subjects.length);
+      
+      // --- TABLE HEADER ---
+      doc.font('Helvetica-Bold').fontSize(10);
+      
+      // Header Background
+      doc.rect(startX, currentY, 842 - 60, rowHeight).fill('#E2E8F0').stroke();
+      doc.fillColor('#1E293B');
+      
+      let currentX = startX;
+      
+      // Draw Header Columns
+      const drawHeaderCell = (text: string, width: number, align: string = 'left') => {
+        doc.text(text, currentX + 5, currentY + 10, { width: width - 10, align: align as any });
+        currentX += width;
+      };
+
+      drawHeaderCell('Roll', rollWidth, 'center');
+      drawHeaderCell('Name', nameWidth, 'left');
+      
+      subjects.forEach((sub: any) => {
+        drawHeaderCell(sub.subject_name.substring(0, 10), subjectWidth, 'center');
+      });
+      
+      drawHeaderCell('Total', totalWidth, 'center');
+      drawHeaderCell('GPA', gpaWidth, 'center');
+      drawHeaderCell('Grade', gradeWidth, 'center');
+      
+      currentY += rowHeight;
+      
+      // --- TABLE ROWS ---
+      if (fontBuffer) doc.font(fontBuffer);
+      else doc.font('Helvetica');
+      doc.fontSize(10);
+      
+      students.forEach((student: any, index: number) => {
+        // New Page Check
+        if (currentY > 550) {
+          doc.addPage({ layout: 'landscape', margin: 30 });
+          currentY = 50;
+          
+          // Redraw Header on new page
+          doc.font('Helvetica-Bold');
+          doc.rect(startX, currentY, 842 - 60, rowHeight).fill('#E2E8F0').stroke();
+          doc.fillColor('#1E293B');
+          currentX = startX;
+          
+          drawHeaderCell('Roll', rollWidth, 'center');
+          drawHeaderCell('Name', nameWidth, 'left');
+          subjects.forEach((sub: any) => drawHeaderCell(sub.subject_name.substring(0, 10), subjectWidth, 'center'));
+          drawHeaderCell('Total', totalWidth, 'center');
+          drawHeaderCell('GPA', gpaWidth, 'center');
+          drawHeaderCell('Grade', gradeWidth, 'center');
+          
+          currentY += rowHeight;
+          
+          // Reset font for body
+          if (fontBuffer) doc.font(fontBuffer);
+          else doc.font('Helvetica');
+          doc.fontSize(10);
+        }
+        
+        // Row Background (Zebra Striping)
+        if (index % 2 === 0) {
+          doc.rect(startX, currentY, 842 - 60, rowHeight).fill('#F8FAFC').stroke();
+        } else {
+          doc.rect(startX, currentY, 842 - 60, rowHeight).stroke();
+        }
+        doc.fillColor('#334155');
+        
+        currentX = startX;
+        
+        // Draw Cell Helper
+        const drawCell = (text: string, width: number, align: string = 'left', color: string = '#334155') => {
+          doc.fillColor(color).text(text, currentX + 5, currentY + 10, { width: width - 10, align: align as any, ellipsis: true });
+          currentX += width;
+        };
+
+        // Roll
+        drawCell(student.roll.toString(), rollWidth, 'center', '#2563EB'); // Blue color for roll
+        
+        // Name
+        drawCell(student.student_name, nameWidth, 'left', '#1E293B');
+        
+        // Subject Marks
+        let totalMarks = 0;
+        let allPassed = true;
+        
+        subjects.forEach((sub: any) => {
+          const mark = marksData[student.student_id]?.[sub.id] || 0;
+          const numMark = parseFloat(mark);
+          totalMarks += numMark;
+          
+          if (numMark < sub.pass_marks) allPassed = false;
+          
+          // Color code marks: Red if failed
+          const markColor = numMark < sub.pass_marks ? '#EF4444' : '#334155';
+          drawCell(numMark.toString(), subjectWidth, 'center', markColor);
+        });
+        
+        // Total
+        drawCell(totalMarks.toFixed(0), totalWidth, 'center', '#1E293B');
+        
+        // Calculate GPA/Grade
+        const percentage = totalMarks / (subjects.reduce((sum: number, s: any) => sum + s.full_marks, 0) || 1) * 100;
+        let gpa = '0.00';
+        let grade = 'F';
+        
+        if (allPassed) {
+             if (percentage >= 80) { gpa = '5.00'; grade = 'A+'; }
+        else if (percentage >= 70) { gpa = '4.00'; grade = 'A'; }
+        else if (percentage >= 60) { gpa = '3.50'; grade = 'A-'; }
+        else if (percentage >= 50) { gpa = '3.00'; grade = 'B'; }
+        else if (percentage >= 40) { gpa = '2.00'; grade = 'C'; }
+        else if (percentage >= 33) { gpa = '1.00'; grade = 'D'; }
+        }
+        
+        // Color code Grade
+        const gradeColor = grade === 'F' ? '#EF4444' : '#10B981'; // Red for F, Green for pass
+        
+        drawCell(gpa, gpaWidth, 'center', gradeColor);
+        drawCell(grade, gradeWidth, 'center', gradeColor);
+        
+        currentY += rowHeight;
+      });
+
+      // --- FOOTER / SUMMARY ---
+      const totalStudents = students.length;
+      const passedStudents = students.filter((s: any) => {
+         let allPassed = true;
+         subjects.forEach((sub: any) => {
+             const mark = parseFloat(marksData[s.student_id]?.[sub.id] || '0');
+             if (mark < sub.pass_marks) allPassed = false;
+         });
+         return allPassed;
+      }).length;
+      
+      const failedStudents = totalStudents - passedStudents;
+      const passRate = totalStudents > 0 ? ((passedStudents / totalStudents) * 100).toFixed(1) : '0';
+
+      doc.moveDown(2);
+      const summaryY = currentY + 20;
+      
+      // Summary Box
+      if (summaryY < 500) { // Only draw if space permits
+          doc.rect(startX, summaryY, 842 - 60, 60).fill('#F1F5F9');
+          doc.fillColor('#1E293B');
+          
+          doc.font('Helvetica-Bold').fontSize(12);
+          doc.text('Summary Report', startX + 20, summaryY + 20);
+          
+          doc.fontSize(10).font('Helvetica');
+          doc.text(`Total Students: ${totalStudents}`, startX + 150, summaryY + 25);
+          doc.text(`Passed: ${passedStudents}`, startX + 280, summaryY + 25);
+          doc.fillColor('#EF4444').text(`Failed: ${failedStudents}`, startX + 380, summaryY + 25);
+          doc.fillColor('#10B981').text(`Pass Rate: ${passRate}%`, startX + 480, summaryY + 25);
+      }
 
       doc.end();
     } catch (error) {

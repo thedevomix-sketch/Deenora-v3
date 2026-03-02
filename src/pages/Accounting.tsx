@@ -342,7 +342,9 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
                  </div>
                  <div className="relative col-span-2 md:col-span-1">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 mb-1 block">পেমেন্ট স্ট্যাটাস</label>
-                    <select
+                     <div className="flex gap-2">
+                         <div className="relative flex-1">
+                             <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value as any)}
                         className="w-full h-12 px-4 bg-slate-50 border rounded-xl text-xs font-black outline-none appearance-none"
@@ -352,7 +354,12 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
                         <option value="partial">আংশিক (Partial)</option>
                         <option value="unpaid">বকেয়া (Unpaid)</option>
                     </select>
-                    <ChevronDown className="absolute right-3 top-[2.1rem] text-slate-400 pointer-events-none" size={16}/>
+                             <ChevronDown className="absolute right-3 top-[1.1rem] text-slate-400 pointer-events-none" size={16}/>
+                         </div>
+                         <button onClick={handleDownloadClassReport} className="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center border hover:bg-blue-50 hover:text-blue-500 transition-colors">
+                             <Download size={20} />
+                         </button>
+                     </div>
                  </div>
               </div>
            </div>

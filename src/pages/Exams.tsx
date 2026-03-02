@@ -230,6 +230,48 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role }) => {
     }
   };
 
+  const handleDownloadClassResult = async () => {
+    if (!selectedExam || !madrasah) return;
+    
+    // Ensure we have marks data
+    if (Object.keys(marksData).length === 0) {
+        await fetchMarkEntryData(selectedExam.id, selectedExam.class_id);
+    }
+
+    const payload = {
+      exam: selectedExam,
+      subjects: subjects,
+      students: students, // Ensure students are fetched via fetchMarkEntryData
+      marksData: marksData,
+      madrasah: { name: madrasah.name }
+    };
+
+    try {
+      const response = await fetch('/api/pdf/class-result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `result-${selectedExam.exam_name}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        alert('Failed to generate PDF');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Error downloading PDF');
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
       <div className="flex items-center justify-between px-2">
@@ -240,6 +282,11 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role }) => {
           <h1 className="text-xl font-black text-[#1E293B] font-noto">
             {view === 'list' ? t('exams', lang) : view === 'insights' ? t('prediction_system', lang) : selectedExam?.exam_name}
           </h1>
+          {view === 'report' && (
+              <button onClick={handleDownloadClassResult} className="w-10 h-10 bg-blue-50 text-[#2563EB] rounded-xl flex items-center justify-center border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <Download size={20} />
+              </button>
+          )}
         </div>
         {(view === 'list' || view === 'insights') && role === 'madrasah_admin' && (
             <div className="flex gap-2">
@@ -275,7 +322,7 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role }) => {
                 <div className="grid grid-cols-3 gap-2">
                     <button onClick={() => { setSelectedExam(exam); setView('subjects'); fetchSubjects(exam.id); }} className="py-2.5 bg-slate-50 text-slate-500 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-100 active:scale-95 transition-all">{t('subject', lang)}</button>
                     <button onClick={() => { setSelectedExam(exam); setView('marks'); fetchSubjects(exam.id); fetchMarkEntryData(exam.id, exam.class_id); }} className="py-2.5 bg-blue-50 text-[#2563EB] rounded-xl text-[9px] font-black uppercase tracking-widest border border-blue-100 active:scale-95 transition-all">{t('enter_marks', lang)}</button>
-                    <button onClick={() => { setSelectedExam(exam); setView('report'); fetchSubjects(exam.id); fetchRanking(exam.id); }} className="py-2.5 bg-[#2563EB] text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-premium active:scale-95 transition-all">{t('rank', lang)}</button>
+                    <button onClick={() => { setSelectedExam(exam); setView('report'); fetchSubjects(exam.id); fetchRanking(exam.id); fetchMarkEntryData(exam.id, exam.class_id); }} className="py-2.5 bg-[#2563EB] text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-premium active:scale-95 transition-all">{t('rank', lang)}</button>
                 </div>
             </div>
           ))}
@@ -401,9 +448,6 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role }) => {
                                   </div>
                               </div>
                               <div className="flex flex-col items-end gap-1.5">
-                                  <button onClick={() => handleDownloadResult(item)} className="w-8 h-8 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center hover:bg-blue-50 hover:text-blue-500 transition-colors">
-                                    <Download size={16} />
-                                  </button>
                                   <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border ${item.pass_status ? 'bg-emerald-50 text-emerald-500 border-emerald-100' : 'bg-red-50 text-red-500 border-red-100'}`}>
                                      {item.pass_status ? (lang === 'bn' ? 'পাস' : 'Passed') : (lang === 'bn' ? 'ফেল' : 'Failed')}
                                   </div>
