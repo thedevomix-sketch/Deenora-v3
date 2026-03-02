@@ -3,23 +3,25 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from 'supabase';
 import { Language } from 'types';
 import { t } from 'translations';
-import { TrendingUp, DollarSign, BarChart3, AlertCircle, Send, Loader2, CheckCircle2, MessageSquare, Smartphone } from 'lucide-react';
+import { TrendingUp, DollarSign, BarChart3, AlertCircle, Send, Loader2, CheckCircle2, MessageSquare, Smartphone, PieChart, Users } from 'lucide-react';
 
 interface SmartFeeAnalyticsProps {
   madrasahId: string;
   lang: Language;
   month: string;
+  refreshKey?: number;
 }
 
-const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang, month }) => {
+const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang, month, refreshKey }) => {
   const [stats, setStats] = useState<any>(null);
   const [reminders, setReminders] = useState<any[]>([]);
+  const [breakdown, setBreakdown] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
     fetchAnalytics();
-  }, [madrasahId, month]);
+  }, [madrasahId, month, refreshKey]);
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -31,11 +33,79 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
 
       if (statsRes.data) setStats(statsRes.data);
       if (remindersRes.data) setReminders(remindersRes.data);
+
+      await fetchBreakdown();
+
     } catch (err) {
       console.error('Smart Fee Analytics Error:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchBreakdown = async () => {
+    // 1. Fetch Fee Structures
+    const { data: structures } = await supabase.from('fee_structures').select('*').eq('madrasah_id', madrasahId);
+    if (!structures) return;
+
+    // 2. Fetch Students for counts and class mapping
+    const { data: students } = await supabase.from('students').select('student_name, class_id').eq('madrasah_id', madrasahId);
+    const studentCounts: Record<string, number> = {};
+    const studentClassMap: Record<string, string> = {};
+    
+    students?.forEach(s => {
+      studentCounts[s.class_id] = (studentCounts[s.class_id] || 0) + 1;
+      studentClassMap[s.student_name] = s.class_id;
+    });
+
+    // 3. Fetch Ledger for transaction counts
+    const { data: ledger } = await supabase.from('ledger')
+      .select('description, amount')
+      .eq('madrasah_id', madrasahId)
+      .eq('type', 'income')
+      .eq('category', 'Student Fee')
+      .ilike('transaction_date', `${month}%`);
+
+    // 4. Process Data
+    const breakdownMap: Record<string, { expected: number, collected: number, students: number, transactions: number }> = {};
+
+    structures.forEach(s => {
+      const count = studentCounts[s.class_id] || 0;
+      const total = count * s.amount;
+      
+      if (!breakdownMap[s.fee_name]) {
+        breakdownMap[s.fee_name] = { expected: 0, collected: 0, students: 0, transactions: 0 };
+      }
+      breakdownMap[s.fee_name].expected += total;
+      breakdownMap[s.fee_name].students += count;
+    });
+
+    // Count transactions and calculate collected amount
+    ledger?.forEach(l => {
+      const parts = l.description.split(' - ');
+      if (parts.length < 2) return;
+
+      const feePart = parts[0];
+      const studentInfo = parts.slice(1).join(' - ');
+      const studentName = studentInfo.split(' (')[0];
+      const classId = studentClassMap[studentName];
+
+      const fees = feePart.split(', ');
+      fees.forEach(f => {
+        if (breakdownMap[f]) {
+          breakdownMap[f].transactions += 1;
+          
+          if (classId) {
+             const structure = structures.find(s => s.fee_name === f && s.class_id === classId);
+             if (structure) {
+                 breakdownMap[f].collected += structure.amount;
+             }
+          }
+        }
+      });
+    });
+
+    setBreakdown(Object.entries(breakdownMap).map(([name, data]) => ({ name, ...data })));
   };
 
   const sendBulkReminder = async (type: 'native' | 'system') => {
@@ -96,6 +166,37 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
           </div>
           <h3 className="text-2xl font-black text-[#1E3A8A]">{stats?.collection_rate}%</h3>
           <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase">Based on current payments</p>
+        </div>
+      </div>
+
+      {/* Fee Breakdown Section */}
+      <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-bubble space-y-4">
+        <div className="flex items-center gap-3 mb-2">
+           <div className="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center">
+              <PieChart size={20} />
+           </div>
+           <h3 className="text-lg font-black text-[#1E3A8A] font-noto">ফি ব্রেকডাউন</h3>
+        </div>
+        
+        <div className="space-y-3">
+           {breakdown.length > 0 ? breakdown.map((item, idx) => (
+              <div key={idx} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                 <div>
+                    <h4 className="font-black text-[#1E3A8A] text-sm">{item.name}</h4>
+                    <div className="flex items-center gap-3 mt-1">
+                       <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Users size={10}/> {item.students} Students</span>
+                       <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1"><CheckCircle2 size={10}/> {item.transactions} Paid</span>
+                    </div>
+                 </div>
+                 <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-400 uppercase">Expected / Collected</p>
+                    <p className="text-sm font-black text-[#1E3A8A]">৳{item.expected.toLocaleString()} / <span className="text-emerald-500">৳{item.collected.toLocaleString()}</span></p>
+                    <p className="text-[10px] font-bold text-red-400 mt-1">Due: ৳{(item.expected - item.collected).toLocaleString()}</p>
+                 </div>
+              </div>
+           )) : (
+              <div className="text-center py-8 text-slate-400 text-xs font-bold">No fee structures found</div>
+           )}
         </div>
       </div>
 
