@@ -124,6 +124,10 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, lang, m
                 <BookOpen size={20} />
                 <span className="text-[9px] font-black font-noto opacity-80">ছাত্র</span>
               </button>
+              <button onClick={() => setView('wallet-sms')} className={`relative flex flex-col items-center gap-1 transition-all flex-1 ${isTabActive('wallet') ? 'text-[#2563EB]' : 'text-[#94A3B8]'}`}>
+                <MessageSquare size={20} />
+                <span className="text-[9px] font-black font-noto opacity-80">SMS</span>
+              </button>
             </>
           )}
           
