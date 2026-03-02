@@ -20,6 +20,8 @@ const Attendance: React.FC<AttendanceProps> = ({ lang, madrasah, onBack, userId 
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<Record<string, 'present' | 'absent' | 'late'>>({});
   const [reportData, setReportData] = useState<any[]>([]);
+  const [reportType, setReportType] = useState<'monthly' | 'yearly'>('monthly');
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -38,7 +40,7 @@ const Attendance: React.FC<AttendanceProps> = ({ lang, madrasah, onBack, userId 
       if (activeTab === 'daily') fetchStudents(selectedClass.id);
       else fetchReport(selectedClass.id);
     }
-  }, [selectedClass?.id, activeTab, date, selectedMonth]);
+  }, [selectedClass?.id, activeTab, date, selectedMonth, reportType, selectedYear]);
 
   const fetchClasses = async () => {
     const { data } = await supabase.from('classes').select('*').eq('madrasah_id', madrasah?.id);
@@ -71,13 +73,20 @@ const Attendance: React.FC<AttendanceProps> = ({ lang, madrasah, onBack, userId 
     setLoading(true);
     setFetchError(null);
     try {
-      const startOfMonth = `${selectedMonth}-01`;
-      const endOfMonth = new Date(new Date(selectedMonth).getFullYear(), new Date(selectedMonth).getMonth() + 1, 0).toISOString().split('T')[0];
+      let startDate, endDate;
+
+      if (reportType === 'monthly') {
+          startDate = `${selectedMonth}-01`;
+          endDate = new Date(new Date(selectedMonth).getFullYear(), new Date(selectedMonth).getMonth() + 1, 0).toISOString().split('T')[0];
+      } else {
+          startDate = `${selectedYear}-01-01`;
+          endDate = `${selectedYear}-12-31`;
+      }
 
       const { data, error } = await supabase.rpc('get_attendance_report', {
         p_class_id: cid,
-        p_start_date: startOfMonth,
-        p_end_date: endOfMonth
+        p_start_date: startDate,
+        p_end_date: endDate
       });
 
       if (error) throw error;
@@ -187,9 +196,30 @@ const Attendance: React.FC<AttendanceProps> = ({ lang, madrasah, onBack, userId 
             <div className="relative"><input type="date" className="w-full h-14 pl-14 pr-6 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20 transition-all" value={date} onChange={(e) => setDate(e.target.value)} /><Calendar className="absolute left-5 top-4 text-[#2563EB]" size={22}/></div>
           </div>
         ) : (
-            <div className="relative animate-in fade-in">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-1.5 block">মাস নির্বাচন করুন</label>
-                <div className="relative"><input type="month" className="w-full h-14 pl-14 pr-6 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20 transition-all" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} /><BarChart3 className="absolute left-5 top-4 text-[#2563EB]" size={22}/></div>
+            <div className="space-y-4 animate-in fade-in">
+                <div className="flex p-1 bg-slate-50 rounded-xl border border-slate-100">
+                    <button onClick={() => setReportType('monthly')} className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${reportType === 'monthly' ? 'bg-white text-[#2563EB] shadow-sm' : 'text-slate-400'}`}>মাসিক</button>
+                    <button onClick={() => setReportType('yearly')} className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${reportType === 'yearly' ? 'bg-white text-[#2563EB] shadow-sm' : 'text-slate-400'}`}>বাৎসরিক</button>
+                </div>
+                
+                <div className="relative">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-1.5 block">
+                        {reportType === 'monthly' ? 'মাস নির্বাচন করুন' : 'বছর নির্বাচন করুন'}
+                    </label>
+                    {reportType === 'monthly' ? (
+                        <div className="relative"><input type="month" className="w-full h-14 pl-14 pr-6 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20 transition-all" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} /><BarChart3 className="absolute left-5 top-4 text-[#2563EB]" size={22}/></div>
+                    ) : (
+                        <div className="relative">
+                            <select className="w-full h-14 pl-14 pr-6 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20 transition-all appearance-none" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
+                                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
+                            </select>
+                            <Calendar className="absolute left-5 top-4 text-[#2563EB]" size={22}/>
+                            <ChevronDown className="absolute right-5 top-4 text-slate-400 pointer-events-none" size={20}/>
+                        </div>
+                    )}
+                </div>
             </div>
         )}
       </div>
