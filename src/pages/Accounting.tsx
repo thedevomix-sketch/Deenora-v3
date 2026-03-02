@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from 'supabase';
 import { Madrasah, LedgerEntry, Fee, Language, UserRole, Class, Student } from 'types';
-import { Calculator, Plus, ArrowUpCircle, ArrowDownCircle, Wallet, History, Users, Loader2, Save, X, Calendar, DollarSign, Tag, FileText, CheckCircle2, TrendingUp, AlertCircle, Send, Search, ChevronDown, BarChart3, Settings2, RefreshCw, Info } from 'lucide-react';
+import { Calculator, Plus, ArrowUpCircle, ArrowDownCircle, Wallet, History, Users, Loader2, Save, X, Calendar, DollarSign, Tag, FileText, CheckCircle2, TrendingUp, AlertCircle, Send, Search, ChevronDown, BarChart3, Settings2, RefreshCw, Info, Download } from 'lucide-react';
 import { t } from 'translations';
 import { sortMadrasahClasses } from 'pages/Classes';
 import SmartFeeAnalytics from 'components/SmartFeeAnalytics';
@@ -248,6 +248,52 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
 
   const totalDues = feesReport.reduce((sum, item) => sum + Number(item.balance_due), 0);
 
+  const handleDownloadClassReport = async () => {
+    if (!madrasah || !selectedClass) {
+      alert('Please select a class first');
+      return;
+    }
+
+    if (feesReport.length === 0) {
+      alert('No data to download');
+      return;
+    }
+
+    const className = classes.find(c => c.id === selectedClass)?.class_name || 'All Classes';
+
+    const payload = {
+      className,
+      month: selectedMonth,
+      students: feesReport,
+      madrasah: { name: madrasah.name }
+    };
+
+    try {
+      const response = await fetch('/api/pdf/class-fees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `class-fees-${className}-${selectedMonth}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        alert('Failed to generate PDF');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Error downloading PDF');
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
       <div className="flex items-center justify-between px-2">
@@ -360,13 +406,15 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
                              </div>
                           </div>
                        </div>
-                       <button 
-                          onClick={() => { setSelectedStudent(item); setCollectAmount(''); setShowFeeCollection(true); }} 
-                          disabled={isFullyPaid || isNoFeeSet} 
-                          className={`px-5 py-3 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm ${isFullyPaid ? 'bg-emerald-100 text-emerald-600 border border-emerald-200' : isNoFeeSet ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : isPartial ? 'bg-orange-500 text-white active:scale-95 shadow-orange-200' : 'bg-[#2563EB] text-white active:scale-95'}`}
-                       >
-                          {isFullyPaid ? 'PAID' : 'ফি জমা নিন'}
-                       </button>
+                       <div className="flex items-center gap-2">
+                         <button 
+                            onClick={() => { setSelectedStudent(item); setCollectAmount(''); setShowFeeCollection(true); }} 
+                            disabled={isFullyPaid || isNoFeeSet} 
+                            className={`px-5 py-3 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm ${isFullyPaid ? 'bg-emerald-100 text-emerald-600 border border-emerald-200' : isNoFeeSet ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : isPartial ? 'bg-orange-500 text-white active:scale-95 shadow-orange-200' : 'bg-[#2563EB] text-white active:scale-95'}`}
+                         >
+                            {isFullyPaid ? 'PAID' : 'ফি জমা নিন'}
+                         </button>
+                       </div>
                     </div>
                   )})
               ) : !fetchError && (

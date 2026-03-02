@@ -18,6 +18,7 @@ import Accounting from 'pages/Accounting';
 import Attendance from 'pages/Attendance';
 import Exams from 'pages/Exams';
 import { View, Class, Student, Language } from 'types';
+import { t } from 'translations';
 import { BookOpen, ShieldAlert } from 'lucide-react';
 
 const App: React.FC = () => {

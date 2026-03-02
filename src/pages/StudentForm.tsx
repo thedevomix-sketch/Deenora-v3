@@ -15,9 +15,10 @@ interface StudentFormProps {
   onSuccess: () => void;
   onCancel: () => void;
   lang: Language;
+  title?: string;
 }
 
-const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultClassId, isEditing, onSuccess, onCancel, lang }) => {
+const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultClassId, isEditing, onSuccess, onCancel, lang, title }) => {
   const [name, setName] = useState(student?.student_name || '');
   const [guardianName, setGuardianName] = useState(student?.guardian_name || '');
   const [roll, setRoll] = useState(student?.roll?.toString() || '');
@@ -113,7 +114,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultCla
           <ArrowLeft size={24} strokeWidth={3} />
         </button>
         <h1 className="text-xl font-black text-white font-noto drop-shadow-md truncate">
-          {isEditing ? t('edit_student', lang) : t('add_student', lang)}
+          {title || (isEditing ? t('edit_student', lang) : t('add_student', lang))}
         </h1>
       </div>
 

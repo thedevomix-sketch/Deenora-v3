@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from 'supabase';
 import { Madrasah, Class, Student, Exam, ExamSubject, Language, UserRole } from 'types';
-import { GraduationCap, Plus, ChevronRight, BookOpen, Trophy, Save, X, Edit3, Trash2, Loader2, ArrowLeft, Calendar, LayoutGrid, CheckCircle2, FileText, Send, User, Hash, Star, AlertCircle, TrendingUp } from 'lucide-react';
+import { GraduationCap, Plus, ChevronRight, BookOpen, Trophy, Save, X, Edit3, Trash2, Loader2, ArrowLeft, Calendar, LayoutGrid, CheckCircle2, FileText, Send, User, Hash, Star, AlertCircle, TrendingUp, Download } from 'lucide-react';
 import { t } from 'translations';
 import { sortMadrasahClasses } from 'pages/Classes';
 import SmartResultAnalytics from 'components/SmartResultAnalytics';
@@ -164,6 +164,70 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role }) => {
     }
     alert(t('success', lang));
     setIsSaving(false);
+  };
+
+  const handleDownloadResult = async (student: any) => {
+    if (!selectedExam || !madrasah) return;
+    
+    // Fetch detailed marks
+    const { data: marks } = await supabase
+      .from('exam_marks')
+      .select('*, exam_subjects(subject_name)')
+      .eq('exam_id', selectedExam.id)
+      .eq('student_id', student.student_id);
+
+    if (!marks) {
+      alert('No marks found');
+      return;
+    }
+
+    const formattedMarks = marks.map((m: any) => ({
+      subject_name: m.exam_subjects?.subject_name || 'Unknown',
+      marks_obtained: m.marks_obtained
+    }));
+
+    // Fetch class name if not present
+    let className = selectedExam.classes?.class_name;
+    if (!className) {
+        const { data: cls } = await supabase.from('classes').select('class_name').eq('id', selectedExam.class_id).single();
+        className = cls?.class_name;
+    }
+
+    const payload = {
+      student: {
+        student_name: student.student_name,
+        roll: student.roll,
+        classes: { class_name: className }
+      },
+      exam: { exam_name: selectedExam.exam_name },
+      marks: formattedMarks,
+      madrasah: { name: madrasah.name }
+    };
+
+    try {
+      const response = await fetch('/api/pdf/result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `result-${student.roll}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        alert('Failed to generate PDF');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Error downloading PDF');
+    }
   };
 
   return (
@@ -337,6 +401,9 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role }) => {
                                   </div>
                               </div>
                               <div className="flex flex-col items-end gap-1.5">
+                                  <button onClick={() => handleDownloadResult(item)} className="w-8 h-8 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center hover:bg-blue-50 hover:text-blue-500 transition-colors">
+                                    <Download size={16} />
+                                  </button>
                                   <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border ${item.pass_status ? 'bg-emerald-50 text-emerald-500 border-emerald-100' : 'bg-red-50 text-red-500 border-red-100'}`}>
                                      {item.pass_status ? (lang === 'bn' ? 'পাস' : 'Passed') : (lang === 'bn' ? 'ফেল' : 'Failed')}
                                   </div>
