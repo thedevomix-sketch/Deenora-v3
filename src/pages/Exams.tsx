@@ -12,9 +12,10 @@ interface ExamsProps {
   madrasah: Madrasah | null;
   onBack: () => void;
   role: UserRole;
+  onNavigateToFinalResults?: () => void;
 }
 
-const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role }) => {
+const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateToFinalResults }) => {
   const [view, setView] = useState<'list' | 'subjects' | 'marks' | 'report' | 'insights'>('list');
   const [exams, setExams] = useState<Exam[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -290,6 +291,11 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role }) => {
         </div>
         {(view === 'list' || view === 'insights') && role === 'madrasah_admin' && (
             <div className="flex gap-2">
+                {onNavigateToFinalResults && (
+                  <button onClick={onNavigateToFinalResults} className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center border border-purple-100 shadow-sm active:scale-95 transition-all">
+                    <Trophy size={20} />
+                  </button>
+                )}
                 <button onClick={() => setView(view === 'insights' ? 'list' : 'insights')} className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${view === 'insights' ? 'bg-[#2563EB] text-white border-[#2563EB]' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
                     <TrendingUp size={20}/>
                 </button>

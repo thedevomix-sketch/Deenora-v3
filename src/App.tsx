@@ -17,6 +17,7 @@ import Teachers from 'pages/Teachers';
 import Accounting from 'pages/Accounting';
 import Attendance from 'pages/Attendance';
 import Exams from 'pages/Exams';
+import FinalResults from 'pages/FinalResults';
 import { View, Class, Student, Language } from 'types';
 import { t } from 'translations';
 import { BookOpen, ShieldAlert } from 'lucide-react';
@@ -129,7 +130,9 @@ const App: React.FC = () => {
       case 'attendance':
         return <Attendance lang={lang} madrasah={madrasah} onBack={() => setView('home')} userId={session?.user?.id} />;
       case 'exams':
-        return <Exams lang={lang} madrasah={madrasah} onBack={() => setView('home')} role={role} />;
+        return <Exams lang={lang} madrasah={madrasah} onBack={() => setView('home')} role={role} onNavigateToFinalResults={() => setView('final-results')} />;
+      case 'final-results':
+        return <FinalResults lang={lang} madrasah={madrasah} onBack={() => setView('home')} role={role} />;
       default:
         return <Home 
                   onStudentClick={(s) => { setSelectedStudent(s); setView('student-details'); }} 

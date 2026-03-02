@@ -455,6 +455,148 @@ async function startServer() {
     }
   });
 
+  app.post('/api/pdf/final-result', async (req, res) => {
+    try {
+      const { title, className, subjects, students, madrasah } = req.body;
+      
+      const doc = new PDFDocument({ size: 'A4', margin: 30, layout: 'landscape' });
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=final-result-${title}.pdf`);
+      
+      doc.pipe(res);
+
+      if (fontBuffer) {
+        doc.font(fontBuffer);
+      } else {
+        doc.font('Helvetica');
+      }
+
+      // --- HEADER DESIGN ---
+      doc.rect(0, 0, 842, 100).fill('#1E3A8A');
+      
+      doc.fillColor('white');
+      doc.fontSize(24).text(madrasah.name || 'Madrasah Name', 0, 30, { align: 'center' });
+      
+      doc.fontSize(14).text(`${title} | Class: ${className}`, 0, 65, { align: 'center' });
+      
+      doc.fillColor('black');
+      doc.moveDown(4);
+
+      // --- TABLE CONFIGURATION ---
+      const startX = 30;
+      const startY = 130;
+      let currentY = startY;
+      const rowHeight = 30;
+      
+      // Dynamic Column Widths
+      const rankWidth = 40;
+      const rollWidth = 50;
+      const nameWidth = 150;
+      const totalWidth = 60;
+      const gpaWidth = 50;
+      const gradeWidth = 50;
+      
+      const fixedWidth = rankWidth + rollWidth + nameWidth + totalWidth + gpaWidth + gradeWidth;
+      const availableWidth = 842 - 60 - fixedWidth;
+      const subjectWidth = Math.max(60, availableWidth / subjects.length);
+      
+      // --- TABLE HEADER ---
+      doc.font('Helvetica-Bold').fontSize(10);
+      
+      doc.rect(startX, currentY, 842 - 60, rowHeight).fill('#E2E8F0').stroke();
+      doc.fillColor('#1E293B');
+      
+      let currentX = startX;
+      
+      const drawHeaderCell = (text: string, width: number, align: string = 'left') => {
+        doc.text(text, currentX + 5, currentY + 10, { width: width - 10, align: align as any });
+        currentX += width;
+      };
+
+      drawHeaderCell('Rank', rankWidth, 'center');
+      drawHeaderCell('Roll', rollWidth, 'center');
+      drawHeaderCell('Name', nameWidth, 'left');
+      
+      subjects.forEach((sub: string) => {
+        drawHeaderCell(sub.substring(0, 10), subjectWidth, 'center');
+      });
+      
+      drawHeaderCell('Total', totalWidth, 'center');
+      drawHeaderCell('GPA', gpaWidth, 'center');
+      drawHeaderCell('Grade', gradeWidth, 'center');
+      
+      currentY += rowHeight;
+      
+      // --- TABLE ROWS ---
+      if (fontBuffer) doc.font(fontBuffer);
+      else doc.font('Helvetica');
+      doc.fontSize(10);
+      
+      students.forEach((student: any, index: number) => {
+        if (currentY > 550) {
+          doc.addPage({ layout: 'landscape', margin: 30 });
+          currentY = 50;
+          
+          doc.font('Helvetica-Bold');
+          doc.rect(startX, currentY, 842 - 60, rowHeight).fill('#E2E8F0').stroke();
+          doc.fillColor('#1E293B');
+          currentX = startX;
+          
+          drawHeaderCell('Rank', rankWidth, 'center');
+          drawHeaderCell('Roll', rollWidth, 'center');
+          drawHeaderCell('Name', nameWidth, 'left');
+          subjects.forEach((sub: string) => drawHeaderCell(sub.substring(0, 10), subjectWidth, 'center'));
+          drawHeaderCell('Total', totalWidth, 'center');
+          drawHeaderCell('GPA', gpaWidth, 'center');
+          drawHeaderCell('Grade', gradeWidth, 'center');
+          
+          currentY += rowHeight;
+          
+          if (fontBuffer) doc.font(fontBuffer);
+          else doc.font('Helvetica');
+          doc.fontSize(10);
+        }
+        
+        if (index % 2 === 0) {
+          doc.rect(startX, currentY, 842 - 60, rowHeight).fill('#F8FAFC').stroke();
+        } else {
+          doc.rect(startX, currentY, 842 - 60, rowHeight).stroke();
+        }
+        doc.fillColor('#334155');
+        
+        currentX = startX;
+        
+        const drawCell = (text: string, width: number, align: string = 'left', color: string = '#334155') => {
+          doc.fillColor(color).text(text, currentX + 5, currentY + 10, { width: width - 10, align: align as any, ellipsis: true });
+          currentX += width;
+        };
+
+        drawCell(`#${student.rank}`, rankWidth, 'center', '#2563EB');
+        drawCell(student.roll?.toString() || '-', rollWidth, 'center', '#2563EB');
+        drawCell(student.student_name, nameWidth, 'left', '#1E293B');
+        
+        subjects.forEach((sub: string) => {
+          const mark = student.marks[sub] || '-';
+          drawCell(mark.toString(), subjectWidth, 'center', '#334155');
+        });
+        
+        drawCell(student.total.toString(), totalWidth, 'center', '#1E293B');
+        
+        const gradeColor = student.grade === 'F' ? '#EF4444' : '#10B981';
+        drawCell(student.gpa, gpaWidth, 'center', gradeColor);
+        drawCell(student.grade, gradeWidth, 'center', gradeColor);
+        
+        currentY += rowHeight;
+      });
+
+      doc.end();
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      res.status(500).send('Error generating PDF');
+    }
+  });
+
   // Vite middleware
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

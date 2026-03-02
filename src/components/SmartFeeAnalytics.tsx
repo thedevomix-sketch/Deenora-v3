@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from 'supabase';
 import { Language, Class } from 'types';
 import { t } from 'translations';
-import { TrendingUp, DollarSign, BarChart3, AlertCircle, Send, Loader2, CheckCircle2, MessageSquare, Smartphone, PieChart, Users, Filter, Calendar } from 'lucide-react';
+import { TrendingUp, DollarSign, BarChart3, AlertCircle, Send, Loader2, CheckCircle2, MessageSquare, Smartphone, PieChart, Users, Filter, Calendar, Wallet } from 'lucide-react';
 
 interface SmartFeeAnalyticsProps {
   madrasahId: string;
@@ -59,18 +59,24 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
         studentClassMap[s.student_name] = s.class_id;
       });
 
-      // 3. Fetch Ledger for transaction counts
+      // 3. Fetch Ledger for transaction counts (Income) AND Expenses
       const { data: ledger } = await supabase.from('ledger')
-        .select('description, amount')
+        .select('description, amount, type, category')
         .eq('madrasah_id', madrasahId)
-        .eq('type', 'income')
-        .eq('category', 'Student Fee')
         .ilike('transaction_date', `${dateFilter}%`);
 
       // 4. Process Data
       const breakdownMap: Record<string, { expected: number, collected: number, students: number, transactions: number }> = {};
       let totalExpected = 0;
       let totalCollected = 0;
+      let totalExpense = 0;
+
+      // Calculate Expenses
+      ledger?.forEach(l => {
+        if (l.type === 'expense') {
+          totalExpense += l.amount;
+        }
+      });
 
       structures.forEach(s => {
         const count = studentCounts[s.class_id] || 0;
@@ -86,8 +92,10 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
         totalExpected += total;
       });
 
-      // Count transactions and calculate collected amount
+      // Count transactions and calculate collected amount (Income)
       ledger?.forEach(l => {
+        if (l.type !== 'income' || l.category !== 'Student Fee') return;
+
         const parts = l.description.split(' - ');
         if (parts.length < 2) return;
 
@@ -122,6 +130,8 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
       setStats({
         expected_income: totalExpected,
         prediction: totalCollected,
+        total_expense: totalExpense,
+        net_income: totalCollected - totalExpense,
         collection_rate: totalExpected > 0 ? ((totalCollected / totalExpected) * 100).toFixed(1) : 0
       });
 
@@ -258,6 +268,28 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
           </div>
           <h3 className="text-2xl font-black text-[#1E3A8A]">{stats?.collection_rate}%</h3>
           <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase">Based on current payments</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-bubble">
+          <div className="flex items-center gap-4 mb-3">
+            <div className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center">
+              <TrendingUp size={20} className="rotate-180" />
+            </div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Expense</p>
+          </div>
+          <h3 className="text-2xl font-black text-red-500">৳ {stats?.total_expense?.toLocaleString('bn-BD')}</h3>
+        </div>
+
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-bubble">
+          <div className="flex items-center gap-4 mb-3">
+            <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-xl flex items-center justify-center">
+              <Wallet size={20} />
+            </div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Net Income</p>
+          </div>
+          <h3 className={`text-2xl font-black ${stats?.net_income >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+            ৳ {stats?.net_income?.toLocaleString('bn-BD')}
+          </h3>
         </div>
       </div>
 

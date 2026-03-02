@@ -143,6 +143,24 @@ export interface Fee {
   students?: Student;
 }
 
+export interface FinalResult {
+  id: string;
+  madrasah_id: string;
+  class_id: string;
+  title: string;
+  created_at: string;
+  classes?: Class;
+  exams?: FinalResultExam[];
+}
+
+export interface FinalResultExam {
+  id: string;
+  final_result_id: string;
+  exam_id: string;
+  weight: number;
+  exam?: Exam;
+}
+
 export type View = 
   | 'home' 
   | 'classes' 
@@ -160,7 +178,8 @@ export type View =
   | 'teachers' 
   | 'accounting' 
   | 'attendance'
-  | 'exams';
+  | 'exams'
+  | 'final-results';
 
 export interface AppState {
   currentView: View;
