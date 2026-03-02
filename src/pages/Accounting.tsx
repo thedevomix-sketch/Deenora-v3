@@ -39,10 +39,12 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
 
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [collectAmount, setCollectAmount] = useState('');
+  const [discount, setDiscount] = useState('');
   const [showClassDropdown, setShowClassDropdown] = useState(false);
   
   const [availableFeeItems, setAvailableFeeItems] = useState<any[]>([]);
   const [selectedFeeCategories, setSelectedFeeCategories] = useState<string[]>([]);
+  const [paidFeeCategories, setPaidFeeCategories] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -54,14 +56,56 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
 
   useEffect(() => {
     if (selectedStudent) {
-      fetchFeeItems(selectedStudent.class_id);
-      setSelectedFeeCategories([]); // Reset to default
+      initializeFeeCollection(selectedStudent);
     }
   }, [selectedStudent]);
 
-  const fetchFeeItems = async (classId: string) => {
-    const { data } = await supabase.from('fee_structures').select('*').eq('class_id', classId);
-    if (data) setAvailableFeeItems(data);
+  const calculateTotal = (categories: string[], discountVal: string) => {
+      const gross = availableFeeItems
+          .filter(item => categories.includes(item.fee_name))
+          .reduce((sum, item) => sum + item.amount, 0);
+      
+      const disc = parseFloat(discountVal) || 0;
+      const net = Math.max(0, gross - disc);
+      return net > 0 ? net.toString() : '';
+  };
+
+  const initializeFeeCollection = async (student: any) => {
+      setDiscount('');
+      
+      // 1. Fetch structures
+      const { data: structures } = await supabase.from('fee_structures').select('*').eq('class_id', student.class_id);
+      if (!structures) {
+          setAvailableFeeItems([]);
+          return;
+      }
+      setAvailableFeeItems(structures);
+
+      // 2. Fetch ledger entries for this student/month to see what's paid
+      const { data: ledgerData } = await supabase.from('ledger')
+        .select('description')
+        .eq('madrasah_id', madrasah?.id)
+        .eq('type', 'income')
+        .eq('category', 'Student Fee')
+        .ilike('description', `%${student.student_name} (${selectedMonth})%`);
+
+      const paidItems: string[] = [];
+      ledgerData?.forEach(l => {
+          const desc = l.description.split(' - ')[0];
+          if (desc) {
+              desc.split(', ').forEach(item => paidItems.push(item));
+          }
+      });
+      setPaidFeeCategories(paidItems);
+
+      // 3. Select unpaid items
+      const unpaid = structures.filter(s => !paidItems.includes(s.fee_name));
+      const unpaidNames = unpaid.map(s => s.fee_name);
+      setSelectedFeeCategories(unpaidNames);
+      
+      // 4. Set initial amount
+      const total = unpaid.reduce((sum, s) => sum + s.amount, 0);
+      setCollectAmount(total > 0 ? total.toString() : '');
   };
 
   const fetchClasses = async () => {
@@ -123,37 +167,50 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
     setIsSaving(true);
     try {
       const amt = parseFloat(collectAmount);
+      const discountAmt = parseFloat(discount) || 0;
       
-      // ডাটাবেসে পেমেন্ট এন্ট্রি করা
-      const { error: feeErr } = await supabase.from('fees').insert({
+      const feeData = {
         madrasah_id: madrasah.id,
         student_id: selectedStudent.student_id,
         class_id: selectedStudent.class_id,
         amount_paid: amt,
         month: selectedMonth,
-        status: (Number(selectedStudent.total_paid) + amt) >= selectedStudent.total_payable ? 'paid' : 'partial'
+        status: (Number(selectedStudent.total_paid) + amt + discountAmt) >= Number(selectedStudent.total_payable) ? 'paid' : 'partial'
+      };
+
+      // Try inserting with discount first
+      let { error: feeErr } = await supabase.from('fees').insert({
+        ...feeData,
+        discount: discountAmt
       });
       
+      // If error is about missing column, retry without discount
+      if (feeErr && (feeErr.message.includes('column') || feeErr.code === '42703')) {
+          const { error: retryErr } = await supabase.from('fees').insert(feeData);
+          feeErr = retryErr;
+      }
+      
       if (feeErr) {
-        if (feeErr.message.includes('column') && feeErr.message.includes('not found')) {
-          throw new Error('ডাটাবেস কলাম মিসিং। অনুগ্রহ করে SQL এডিটর থেকে নতুন কোডটি রান করুন।');
-        }
         throw feeErr;
       }
 
       // লেনদেনের খেরাতে (Ledger) আয় যোগ করা
       const feeDescription = selectedFeeCategories.join(', ');
+      const className = classes.find(c => c.id === selectedStudent.class_id)?.class_name || '';
+      const roll = selectedStudent.roll || '-';
+      
       await supabase.from('ledger').insert({
         madrasah_id: madrasah.id,
         type: 'income',
         amount: amt,
         category: 'Student Fee',
-        description: `${feeDescription} - ${selectedStudent.student_name} (${selectedMonth})`,
+        description: `${feeDescription} - ${selectedStudent.student_name} (${className} | Roll: ${roll} | ${selectedMonth})${discountAmt > 0 ? ` (ছাড়: ৳${discountAmt})` : ''}`,
         transaction_date: new Date().toISOString().split('T')[0]
       });
 
       setShowFeeCollection(false);
       setCollectAmount('');
+      setDiscount('');
       setSelectedStudent(null);
       fetchData();
     } catch (err: any) { 
@@ -325,22 +382,51 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
       {activeTab === 'ledger' && (
         <div className="space-y-3 animate-in slide-in-from-bottom-5">
           {loading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#2563EB]" /></div> : ledger.length > 0 ? (
-            ledger.map(entry => (
+            ledger.map(entry => {
+              let displayName = entry.category;
+              let details = '';
+              let feeType = '';
+
+              if (entry.category === 'Student Fee') {
+                // Parse description: "FeeType - StudentName (Details)"
+                const parts = entry.description.split(' - ');
+                if (parts.length >= 2) {
+                  feeType = parts[0];
+                  const namePart = parts.slice(1).join(' - '); // Handle names with dashes if any
+                  const nameMatch = namePart.match(/^(.*?)\s*\((.*?)\)/);
+                  if (nameMatch) {
+                    displayName = nameMatch[1];
+                    details = nameMatch[2];
+                  } else {
+                    displayName = namePart;
+                  }
+                }
+              }
+
+              return (
               <div key={entry.id} className="bg-white p-4 rounded-[1.8rem] border border-slate-100 shadow-bubble flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${entry.type === 'income' ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}>
                     {entry.type === 'income' ? <ArrowUpCircle size={20} /> : <ArrowDownCircle size={20} />}
                   </div>
                   <div>
-                    <h5 className="font-black text-[#1E3A8A] font-noto leading-none mb-1">{entry.category}</h5>
-                    <p className="text-[10px] text-slate-400 font-bold">{new Date(entry.transaction_date).toLocaleDateString('bn-BD')}</p>
+                    <h5 className="font-black text-[#1E3A8A] font-noto leading-none mb-1">{displayName}</h5>
+                    {entry.category === 'Student Fee' && (
+                        <div className="flex flex-col gap-0.5">
+                            <p className="text-[10px] text-slate-500 font-bold">{details}</p>
+                            <p className="text-[9px] text-slate-400 font-bold">{feeType}</p>
+                        </div>
+                    )}
+                    {entry.category !== 'Student Fee' && (
+                        <p className="text-[10px] text-slate-400 font-bold">{new Date(entry.transaction_date).toLocaleDateString('bn-BD')}</p>
+                    )}
                   </div>
                 </div>
                 <div className={`text-right ${entry.type === 'income' ? 'text-emerald-600' : 'text-red-600'} font-black`}>
                   {entry.type === 'income' ? '+' : '-'} ৳{entry.amount}
                 </div>
               </div>
-            ))
+            )})
           ) : <div className="text-center py-20 text-slate-400 uppercase text-xs font-black">No transactions</div>}
         </div>
       )}
@@ -408,37 +494,41 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
                           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 max-h-40 overflow-y-auto">
                               <div className="space-y-2">
                                   {availableFeeItems.length > 0 ? (
-                                      availableFeeItems.map(item => (
-                                          <label key={item.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white transition-colors cursor-pointer">
-                                              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${selectedFeeCategories.includes(item.fee_name) ? 'bg-[#2563EB] border-[#2563EB]' : 'border-slate-300'}`}>
-                                                  {selectedFeeCategories.includes(item.fee_name) && <CheckCircle2 size={14} className="text-white" />}
-                                              </div>
-                                              <input 
-                                                  type="checkbox" 
-                                                  className="hidden"
-                                                  checked={selectedFeeCategories.includes(item.fee_name)}
-                                                  onChange={(e) => {
-                                                      let newCategories = [];
-                                                      if (e.target.checked) {
-                                                          newCategories = [...selectedFeeCategories, item.fee_name];
-                                                          // Add amount if checked
-                                                          const currentAmount = parseFloat(collectAmount) || 0;
-                                                          setCollectAmount((currentAmount + item.amount).toString());
-                                                      } else {
-                                                          newCategories = selectedFeeCategories.filter(c => c !== item.fee_name);
-                                                          // Subtract amount if unchecked
-                                                          const currentAmount = parseFloat(collectAmount) || 0;
-                                                          setCollectAmount(Math.max(0, currentAmount - item.amount).toString());
-                                                      }
-                                                      setSelectedFeeCategories(newCategories);
-                                                  }}
-                                              />
-                                              <div className="flex-1 flex justify-between items-center">
-                                                  <span className="text-xs font-black text-[#1E3A8A]">{item.fee_name}</span>
-                                                  <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">৳{item.amount}</span>
-                                              </div>
-                                          </label>
-                                      ))
+                                      availableFeeItems.map(item => {
+                                          const isPaid = paidFeeCategories.includes(item.fee_name);
+                                          const isSelected = selectedFeeCategories.includes(item.fee_name);
+                                          
+                                          return (
+                                              <label key={item.id} className={`flex items-center gap-3 p-2 rounded-xl transition-colors ${isPaid ? 'bg-emerald-50 cursor-default' : 'hover:bg-white cursor-pointer'}`}>
+                                                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isSelected || isPaid ? 'bg-[#2563EB] border-[#2563EB]' : 'border-slate-300'} ${isPaid ? 'opacity-50' : ''}`}>
+                                                      {(isSelected || isPaid) && <CheckCircle2 size={14} className="text-white" />}
+                                                  </div>
+                                                  <input 
+                                                      type="checkbox" 
+                                                      className="hidden"
+                                                      checked={isSelected || isPaid}
+                                                      disabled={isPaid}
+                                                      onChange={(e) => {
+                                                          if (isPaid) return;
+                                                          let newCategories = [];
+                                                          if (e.target.checked) {
+                                                              newCategories = [...selectedFeeCategories, item.fee_name];
+                                                          } else {
+                                                              newCategories = selectedFeeCategories.filter(c => c !== item.fee_name);
+                                                          }
+                                                          setSelectedFeeCategories(newCategories);
+                                                          setCollectAmount(calculateTotal(newCategories, discount));
+                                                      }}
+                                                  />
+                                                  <div className="flex-1 flex justify-between items-center">
+                                                      <span className={`text-xs font-black ${isPaid ? 'text-emerald-600' : 'text-[#1E3A8A]'}`}>
+                                                          {item.fee_name} {isPaid && '(পরিশোধিত)'}
+                                                      </span>
+                                                      <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">৳{item.amount}</span>
+                                                  </div>
+                                              </label>
+                                          );
+                                      })
                                   ) : (
                                       <div className="text-center py-4 text-slate-400 text-xs font-bold">কোনো ফি আইটেম পাওয়া যায়নি। দয়া করে ফি সেটিংস থেকে আইটেম যোগ করুন।</div>
                                   )}
@@ -450,6 +540,16 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
                           <div className="relative">
                             <input type="number" className="w-full h-14 bg-slate-50 rounded-2xl px-12 font-black text-lg outline-none border-2 border-transparent focus:border-[#2563EB]/20" placeholder="0.00" value={collectAmount} onChange={(e) => setCollectAmount(e.target.value)} />
                             <DollarSign className="absolute left-4 top-4 text-[#2563EB]" size={20}/>
+                          </div>
+                      </div>
+                      <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">ছাড় / ডিসকাউন্ট (যদি থাকে)</label>
+                          <div className="relative">
+                            <input type="number" className="w-full h-14 bg-slate-50 rounded-2xl px-12 font-black text-lg outline-none border-2 border-transparent focus:border-orange-500/20" placeholder="0.00" value={discount} onChange={(e) => {
+                                setDiscount(e.target.value);
+                                setCollectAmount(calculateTotal(selectedFeeCategories, e.target.value));
+                            }} />
+                            <Tag className="absolute left-4 top-4 text-orange-500" size={20}/>
                           </div>
                       </div>
                       <button onClick={handleCollectFee} disabled={isSaving || !collectAmount} className="w-full py-5 bg-[#2563EB] text-white font-black rounded-full shadow-premium flex items-center justify-center gap-3 active:scale-95 transition-all text-base">

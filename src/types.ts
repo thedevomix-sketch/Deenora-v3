@@ -136,6 +136,7 @@ export interface Fee {
   class_id: string;
   amount_paid: number;
   amount_due: number;
+  discount?: number;
   month: string; // YYYY-MM
   status: 'paid' | 'unpaid' | 'partial';
   paid_at?: string;
