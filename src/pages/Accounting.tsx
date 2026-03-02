@@ -41,6 +41,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
   const [collectAmount, setCollectAmount] = useState('');
   const [discount, setDiscount] = useState('');
   const [showClassDropdown, setShowClassDropdown] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'partial' | 'unpaid'>('all');
   
   const [availableFeeItems, setAvailableFeeItems] = useState<any[]>([]);
   const [selectedFeeCategories, setSelectedFeeCategories] = useState<string[]>([]);
@@ -273,7 +274,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
       {activeTab === 'fees' && (
         <div className="space-y-4 animate-in slide-in-from-bottom-5">
            <div className="bg-white p-5 rounded-[2.2rem] border border-slate-100 shadow-bubble space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                  <div className="relative">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 mb-1 block">শ্রেণি</label>
                     <button onClick={() => setShowClassDropdown(!showClassDropdown)} className="w-full h-12 px-4 rounded-xl border bg-slate-50 flex items-center justify-between text-xs font-black">
@@ -292,6 +293,20 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
                  <div className="relative">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 mb-1 block">মাস</label>
                     <input type="month" className="w-full h-12 px-4 bg-slate-50 border rounded-xl text-xs font-black outline-none" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+                 </div>
+                 <div className="relative col-span-2 md:col-span-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 mb-1 block">পেমেন্ট স্ট্যাটাস</label>
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                        className="w-full h-12 px-4 bg-slate-50 border rounded-xl text-xs font-black outline-none appearance-none"
+                    >
+                        <option value="all">সব (All)</option>
+                        <option value="paid">পরিশোধিত (Paid)</option>
+                        <option value="partial">আংশিক (Partial)</option>
+                        <option value="unpaid">বকেয়া (Unpaid)</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-[2.1rem] text-slate-400 pointer-events-none" size={16}/>
                  </div>
               </div>
            </div>
@@ -317,7 +332,16 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
                   <p className="text-[10px] font-black uppercase tracking-widest">ডাটা লোড হচ্ছে...</p>
                 </div>
               ) : feesReport.length > 0 ? (
-                  feesReport.map((item: any) => {
+                  feesReport.filter((item: any) => {
+                      const isFullyPaid = Number(item.balance_due) <= 0 && Number(item.total_payable) > 0;
+                      const isPartial = Number(item.balance_due) > 0 && Number(item.total_paid) > 0;
+                      const isUnpaid = Number(item.total_paid) === 0 && Number(item.total_payable) > 0;
+
+                      if (statusFilter === 'paid') return isFullyPaid;
+                      if (statusFilter === 'partial') return isPartial;
+                      if (statusFilter === 'unpaid') return isUnpaid;
+                      return true;
+                  }).map((item: any) => {
                     const isFullyPaid = Number(item.balance_due) <= 0 && Number(item.total_payable) > 0;
                     const isPartial = Number(item.balance_due) > 0 && Number(item.total_paid) > 0;
                     const isNoFeeSet = Number(item.total_payable) === 0;
