@@ -4,6 +4,7 @@ import { supabase, offlineApi } from 'supabase';
 import { Mail, Lock, Loader2, BookOpen, AlertCircle, Smartphone, Key, UserCheck, ShieldCheck } from 'lucide-react';
 import { Language } from 'types';
 import { t } from 'translations';
+import { isValidUUID } from 'utils/validation';
 
 interface AuthProps {
   lang: Language;
@@ -38,9 +39,13 @@ const Auth: React.FC<AuthProps> = ({ lang }) => {
         localStorage.removeItem('teacher_session');
         offlineApi.removeCache('profile');
         // Use maybeSingle instead of single to handle super admins who don't have a madrasah entry
-        const { data: profile } = await supabase.from('madrasahs').select('name').eq('id', data.user.id).maybeSingle();
-        if (profile) localStorage.setItem('m_name', profile.name);
-        else localStorage.setItem('m_name', 'Super Admin'); // Default name for super admin
+        if (isValidUUID(data.user.id)) {
+          const { data: profile } = await supabase.from('madrasahs').select('name').eq('id', data.user.id).maybeSingle();
+          if (profile) localStorage.setItem('m_name', profile.name);
+          else localStorage.setItem('m_name', 'Super Admin'); // Default name for super admin
+        } else {
+          localStorage.setItem('m_name', 'Super Admin');
+        }
       }
     } catch (err: any) { 
       setError(t('login_error', lang)); 

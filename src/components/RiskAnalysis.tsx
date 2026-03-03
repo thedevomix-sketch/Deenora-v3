@@ -4,6 +4,7 @@ import { supabase } from 'supabase';
 import { Language, Student } from 'types';
 import { t } from 'translations';
 import { AlertTriangle, ShieldCheck, Zap, Loader2, ChevronRight, User, GraduationCap, Clock, TrendingDown } from 'lucide-react';
+import { isValidUUID } from 'utils/validation';
 
 interface RiskData {
   student_id: string;
@@ -34,6 +35,7 @@ const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ madrasahId, lang, onStudent
   }, [madrasahId]);
 
   const fetchRisks = async () => {
+    if (!isValidUUID(madrasahId)) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc('get_student_risk_analysis', { p_madrasah_id: madrasahId });

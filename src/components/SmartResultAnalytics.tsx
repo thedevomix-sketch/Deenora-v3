@@ -4,6 +4,7 @@ import { supabase } from 'supabase';
 import { Language } from 'types';
 import { t } from 'translations';
 import { TrendingUp, TrendingDown, Award, AlertCircle, Loader2, User, ChevronRight, BarChart2, BookOpen, Users, ArrowUpRight, ArrowDownRight, Filter } from 'lucide-react';
+import { isValidUUID } from 'utils/validation';
 
 interface SmartResultAnalyticsProps {
   madrasahId: string;
@@ -35,11 +36,13 @@ const SmartResultAnalytics: React.FC<SmartResultAnalyticsProps> = ({ madrasahId,
   }, [madrasahId, selectedClassId]);
 
   const fetchClasses = async () => {
+    if (!isValidUUID(madrasahId)) return;
     const { data } = await supabase.from('classes').select('*').eq('madrasah_id', madrasahId);
     if (data) setClasses(data);
   };
 
   const fetchAnalytics = async () => {
+    if (!isValidUUID(madrasahId)) return;
     setLoading(true);
     try {
         // Fetch Exams

@@ -4,6 +4,7 @@ import { supabase } from 'supabase';
 import { Language, Class } from 'types';
 import { t } from 'translations';
 import { TrendingUp, DollarSign, BarChart3, AlertCircle, Send, Loader2, CheckCircle2, MessageSquare, Smartphone, PieChart, Users, Filter, Calendar, Wallet } from 'lucide-react';
+import { isValidUUID } from 'utils/validation';
 
 interface SmartFeeAnalyticsProps {
   madrasahId: string;
@@ -31,6 +32,7 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
   }, [madrasahId, selectedMonth, selectedYear, viewMode, selectedClassId, refreshKey]);
 
   const fetchAnalytics = async () => {
+    if (!isValidUUID(madrasahId)) return;
     setLoading(true);
     try {
       // Determine date filter for ledger

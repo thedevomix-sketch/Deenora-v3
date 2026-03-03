@@ -8,6 +8,7 @@ import { t } from 'translations';
 import RiskAnalysis from 'components/RiskAnalysis';
 import SmartFeeAnalytics from 'components/SmartFeeAnalytics';
 import SmartResultAnalytics from 'components/SmartResultAnalytics';
+import { isValidUUID } from 'utils/validation';
 
 interface HomeProps {
   onStudentClick: (student: Student) => void;
@@ -39,7 +40,7 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
   const [isClearing, setIsClearing] = useState(false);
 
   const fetchDashboardStats = async () => {
-    if (!madrasahId) return;
+    if (!isValidUUID(madrasahId)) return;
     setLoadingStats(true);
     try {
       const today = new Date().toISOString().split('T')[0];

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from 'lib/supabase';
 import { OfflineService } from 'services/OfflineService';
 import { Profile, Madrasah } from 'types';
+import { isValidUUID } from '../utils/validation';
 
 export const useAuth = () => {
   const [session, setSession] = useState<any>(null);
@@ -12,6 +13,10 @@ export const useAuth = () => {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const fetchUserProfile = async (userId: string) => {
+    if (!isValidUUID(userId)) {
+      setLoading(false);
+      return;
+    }
     try {
       // First, get the profile
       const { data: profileData, error: profileError } = await supabase
@@ -25,8 +30,8 @@ export const useAuth = () => {
       if (profileData) {
         setProfile(profileData);
         
-        // Then get the madrasah if madrasah_id exists
-        if (profileData.madrasah_id) {
+        // Then get the madrasah if madrasah_id exists and is valid
+        if (isValidUUID(profileData.madrasah_id)) {
           const { data: madrasahData, error: mError } = await supabase
             .from('madrasahs')
             .select('*')
