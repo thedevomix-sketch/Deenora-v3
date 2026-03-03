@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { createClient } from '@supabase/supabase-js';
 // Fix: Import icons from lucide-react instead of ../supabase
 import { Loader2, Search, ChevronRight, User as UserIcon, ShieldCheck, Database, Globe, CheckCircle, XCircle, CreditCard, Save, X, Settings, Smartphone, MessageSquare, Key, Shield, ArrowLeft, Copy, Check, Calendar, Users, Layers, MonitorSmartphone, Server, BarChart3, TrendingUp, RefreshCcw, Clock, Hash, History as HistoryIcon, Zap, Activity, PieChart, Users2, CheckCircle2, AlertCircle, AlertTriangle, RefreshCw, Trash2, Sliders, ToggleLeft, ToggleRight, GraduationCap, Banknote, PhoneCall } from 'lucide-react';
 import { supabase, smsApi } from 'supabase';
@@ -82,6 +83,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newInstName, setNewInstName] = useState('');
   const [newInstPhone, setNewInstPhone] = useState('');
+  const [newInstEmail, setNewInstEmail] = useState('');
+  const [newInstPassword, setNewInstPassword] = useState('');
   const [newInstType, setNewInstType] = useState<'madrasah' | 'school' | 'kindergarten' | 'nurani'>('madrasah');
   const [newInstLoginCode, setNewInstLoginCode] = useState('');
   const [isCreatingInst, setIsCreatingInst] = useState(false);
@@ -366,36 +369,82 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   };
 
   const handleCreateInstitution = async () => {
-    if (!newInstName.trim() || !newInstPhone.trim()) {
-      setStatusModal({ show: true, type: 'error', title: 'ত্রুটি', message: 'নাম এবং ফোন নম্বর আবশ্যক' });
+    if (!newInstName.trim() || !newInstPhone.trim() || !newInstEmail.trim() || !newInstPassword.trim()) {
+      setStatusModal({ show: true, type: 'error', title: 'ত্রুটি', message: 'নাম, ফোন, ইমেইল এবং পাসওয়ার্ড আবশ্যক' });
       return;
     }
     
     setIsCreatingInst(true);
     try {
-      const newId = crypto.randomUUID();
-      const { error } = await supabase.from('institutions').insert({
-        id: newId,
-        name: newInstName.trim(),
+      // 1. Create a temporary Supabase client to create the user without logging out the admin
+      const tempClient = createClient(
+        'https://risgwrppzvufbelusxlo.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpc2d3cnBwenZ1ZmJlbHVzeGxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzNzY1ODEsImV4cCI6MjA4Nzk1MjU4MX0.ntPON5RswqkFYjaHLLzVJ3ZJkviJOIB5Pd7vA6uCfmk',
+        {
+          auth: {
+            persistSession: false, // Do not persist session to avoid overwriting admin session
+            autoRefreshToken: false,
+            detectSessionInUrl: false
+          }
+        }
+      );
+
+      // 2. Sign up the new user
+      const { data: authData, error: authError } = await tempClient.auth.signUp({
+        email: newInstEmail.trim(),
+        password: newInstPassword.trim(),
+        options: {
+          data: {
+            name: newInstName.trim(),
+            madrasah_name: newInstName.trim()
+          }
+        }
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("User creation failed");
+
+      const newUserId = authData.user.id;
+
+      // 3. Wait a moment for the trigger to create the initial record
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // 4. Update the institution record with specific details using the admin client
+      const { error: updateError } = await supabase.from('institutions').update({
         phone: newInstPhone.trim(),
         institution_type: newInstType,
         login_code: newInstLoginCode.trim() || null,
-        is_active: true,
-        is_super_admin: false,
-        balance: 0,
-        sms_balance: 0,
-        status: 'active'
-      });
+        status: 'active',
+        is_active: true
+      }).eq('id', newUserId);
       
-      if (error) throw error;
+      if (updateError) {
+        // If update fails, try inserting (in case trigger failed or was slow)
+        const { error: insertError } = await supabase.from('institutions').upsert({
+          id: newUserId,
+          name: newInstName.trim(),
+          phone: newInstPhone.trim(),
+          institution_type: newInstType,
+          login_code: newInstLoginCode.trim() || null,
+          is_active: true,
+          is_super_admin: false,
+          balance: 0,
+          sms_balance: 0,
+          status: 'active'
+        });
+        if (insertError) throw insertError;
+      }
       
-      setStatusModal({ show: true, type: 'success', title: 'সফল', message: 'নতুন প্রতিষ্ঠান তৈরি করা হয়েছে।' });
+      setStatusModal({ show: true, type: 'success', title: 'সফল', message: 'নতুন প্রতিষ্ঠান এবং ইউজার তৈরি করা হয়েছে।' });
       setShowCreateModal(false);
       setNewInstName('');
       setNewInstPhone('');
+      setNewInstEmail('');
+      setNewInstPassword('');
       setNewInstLoginCode('');
       initData(true);
     } catch (err: any) {
+      console.error("Create Error:", err);
       setStatusModal({ show: true, type: 'error', title: 'ব্যর্থ', message: err.message });
     } finally {
       setIsCreatingInst(false);
@@ -890,6 +939,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                   value={newInstPhone} 
                   onChange={(e) => setNewInstPhone(e.target.value)} 
                   placeholder="017..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">ইমেইল</label>
+                <input 
+                  type="email" 
+                  className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20" 
+                  value={newInstEmail} 
+                  onChange={(e) => setNewInstEmail(e.target.value)} 
+                  placeholder="admin@madrasah.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">পাসওয়ার্ড</label>
+                <input 
+                  type="password" 
+                  className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20" 
+                  value={newInstPassword} 
+                  onChange={(e) => setNewInstPassword(e.target.value)} 
+                  placeholder="******"
                 />
               </div>
 
