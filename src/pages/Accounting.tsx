@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from 'supabase';
-import { Madrasah, LedgerEntry, Fee, Language, UserRole, Class, Student } from 'types';
+import { Institution, LedgerEntry, Fee, Language, UserRole, Class, Student } from 'types';
 import { Calculator, Plus, ArrowUpCircle, ArrowDownCircle, Wallet, History, Users, Loader2, Save, X, Calendar, DollarSign, Tag, FileText, CheckCircle2, TrendingUp, AlertCircle, Send, Search, ChevronDown, BarChart3, Settings2, RefreshCw, Info, Download } from 'lucide-react';
 import { t } from 'translations';
 import { sortMadrasahClasses } from 'pages/Classes';
@@ -10,7 +10,7 @@ import { generateClassFeeReportPDF } from '../utils/pdfGenerator';
 
 interface AccountingProps {
   lang: Language;
-  madrasah: Madrasah | null;
+  madrasah: Institution | null;
   onBack: () => void;
   role: UserRole;
 }
@@ -86,7 +86,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
       // 2. Fetch ledger entries for this student/month to see what's paid
       const { data: ledgerData } = await supabase.from('ledger')
         .select('description')
-        .eq('madrasah_id', madrasah?.id)
+        .eq('institution_id', madrasah?.id)
         .eq('type', 'income')
         .eq('category', 'Student Fee')
         .ilike('description', `%${student.student_name} (${selectedMonth})%`);
@@ -111,7 +111,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
   };
 
   const fetchClasses = async () => {
-    const { data } = await supabase.from('classes').select('*').eq('madrasah_id', madrasah?.id);
+    const { data } = await supabase.from('classes').select('*').eq('institution_id', madrasah?.id);
     if (data) setClasses(sortMadrasahClasses(data));
   };
 
@@ -121,7 +121,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
     setFetchError(null);
     try {
       if (activeTab === 'summary' || activeTab === 'ledger') {
-        const { data } = await supabase.from('ledger').select('*').eq('madrasah_id', madrasah.id).order('transaction_date', { ascending: false });
+        const { data } = await supabase.from('ledger').select('*').eq('institution_id', madrasah.id).order('transaction_date', { ascending: false });
         if (data) setLedger(data);
       }
       
@@ -129,7 +129,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
         const classId = selectedClass === '' ? null : selectedClass;
         
         const { data, error } = await supabase.rpc('get_monthly_dues_report', {
-          p_madrasah_id: madrasah.id,
+          p_institution_id: madrasah.id,
           p_class_id: classId,
           p_month: selectedMonth
         });
@@ -144,7 +144,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
         setFeesReport(data || []);
 
         if (!data || data.length === 0) {
-          let checkQuery = supabase.from('students').select('id', { count: 'exact', head: true }).eq('madrasah_id', madrasah.id);
+          let checkQuery = supabase.from('students').select('id', { count: 'exact', head: true }).eq('institution_id', madrasah.id);
           if (classId) checkQuery = checkQuery.eq('class_id', classId);
           const { count } = await checkQuery;
           setAnyStudentsInMadrasah(count && count > 0 ? true : false);
@@ -154,7 +154,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
       }
 
       if (activeTab === 'structures') {
-        const { data } = await supabase.from('fee_structures').select('*, classes(class_name)').eq('madrasah_id', madrasah.id);
+        const { data } = await supabase.from('fee_structures').select('*, classes(class_name)').eq('institution_id', madrasah.id);
         if (data) setStructures(data);
       }
       setRefreshKey(prev => prev + 1);
@@ -172,7 +172,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
       const discountAmt = parseFloat(discount) || 0;
       
       const feeData = {
-        madrasah_id: madrasah.id,
+        institution_id: madrasah.id,
         student_id: selectedStudent.student_id,
         class_id: selectedStudent.class_id,
         amount_paid: amt,
@@ -202,7 +202,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
       const roll = selectedStudent.roll || '-';
       
       await supabase.from('ledger').insert({
-        madrasah_id: madrasah.id,
+        institution_id: madrasah.id,
         type: 'income',
         amount: amt,
         category: 'Student Fee',
@@ -227,7 +227,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
     setIsSaving(true);
     try {
       const { error } = await supabase.from('ledger').insert({
-        madrasah_id: madrasah.id,
+        institution_id: madrasah.id,
         type: type,
         amount: parseFloat(amount),
         category: category.trim(),
@@ -429,7 +429,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
         <div className="space-y-6 animate-in slide-in-from-bottom-5">
           {madrasah && (
             <SmartFeeAnalytics 
-              madrasahId={madrasah.id} 
+              institutionId={madrasah.id} 
               lang={lang} 
               month={selectedMonth} 
               refreshKey={refreshKey}
@@ -695,7 +695,7 @@ const Accounting: React.FC<AccountingProps> = ({ lang, madrasah, onBack, role })
                     setIsSaving(true);
                     try {
                         const { error } = await supabase.from('fee_structures').insert({
-                            madrasah_id: madrasah?.id,
+                            institution_id: madrasah?.id,
                             class_id: selectedClass,
                             fee_name: category,
                             amount: parseFloat(amount)

@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Exam, Student, ExamSubject, Madrasah, SeatAssignment } from '../types';
+import { Exam, Student, ExamSubject, Institution, SeatAssignment } from '../types';
 
 // Helper: Load Image
 const loadImage = (url: string): Promise<string> => {

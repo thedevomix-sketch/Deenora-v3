@@ -12,11 +12,11 @@ interface StudentDetailsProps {
   onBack: () => void;
   lang: Language;
   readOnly?: boolean;
-  madrasahId?: string;
+  institutionId?: string;
   triggerRefresh?: () => void;
 }
 
-const StudentDetails: React.FC<StudentDetailsProps> = ({ student, onEdit, onBack, lang, readOnly, madrasahId, triggerRefresh }) => {
+const StudentDetails: React.FC<StudentDetailsProps> = ({ student, onEdit, onBack, lang, readOnly, institutionId, triggerRefresh }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 

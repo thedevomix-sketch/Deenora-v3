@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from 'supabase';
-import { Madrasah, Class, Student, Exam, ExamSubject, Language, UserRole, ExamRoom, SeatAssignment } from 'types';
+import { Institution, Class, Student, Exam, ExamSubject, Language, UserRole, ExamRoom, SeatAssignment } from 'types';
 import { GraduationCap, Plus, ChevronRight, BookOpen, Trophy, Save, X, Edit3, Trash2, Loader2, ArrowLeft, Calendar, LayoutGrid, CheckCircle2, FileText, Send, User, Hash, Star, AlertCircle, TrendingUp, Download, CreditCard, Grid3X3, Printer, RefreshCw } from 'lucide-react';
 import { t } from 'translations';
 import { sortMadrasahClasses } from 'pages/Classes';
@@ -12,7 +12,7 @@ import { generateAdmitCardPDF } from '../utils/admitCardGenerator';
 
 interface ExamsProps {
   lang: Language;
-  madrasah: Madrasah | null;
+  madrasah: Institution | null;
   onBack: () => void;
   role: UserRole;
   onNavigateToFinalResults?: () => void;
@@ -58,13 +58,13 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
   }, [madrasah?.id, view]);
 
   const fetchExams = async () => {
-    const { data } = await supabase.from('exams').select('*, classes(class_name)').eq('madrasah_id', madrasah?.id).order('created_at', { ascending: false });
+    const { data } = await supabase.from('exams').select('*, classes(class_name)').eq('institution_id', madrasah?.id).order('created_at', { ascending: false });
     if (data) setExams(data);
     setLoading(false);
   };
 
   const fetchClasses = async () => {
-    const { data } = await supabase.from('classes').select('*').eq('madrasah_id', madrasah?.id);
+    const { data } = await supabase.from('classes').select('*').eq('institution_id', madrasah?.id);
     if (data) setClasses(sortMadrasahClasses(data));
   };
 
@@ -243,7 +243,7 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
     if (!madrasah || !examName || !classId) return;
     setIsSaving(true);
     const { error } = await supabase.from('exams').insert({
-      madrasah_id: madrasah.id,
+      institution_id: madrasah.id,
       class_id: classId,
       exam_name: examName,
       exam_date: examDate
@@ -394,7 +394,7 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
       </div>
 
       {activeTab === 'analytics' && madrasah && (
-          <SmartResultAnalytics madrasahId={madrasah.id} lang={lang} />
+          <SmartResultAnalytics institutionId={madrasah.id} lang={lang} />
       )}
 
       {activeTab === 'final-results' && (

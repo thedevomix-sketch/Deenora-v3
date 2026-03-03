@@ -3,12 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, UserPlus, ShieldCheck, User as UserIcon, Loader2, Save, X, Phone, Key, CheckCircle2, Trash2, Edit3, Smartphone, MessageSquare, Layers, MessageCircle, Shield, Check, ChevronRight, AlertTriangle, AlertCircle } from 'lucide-react';
 import { supabase } from 'supabase';
-import { Teacher, Language, Madrasah } from 'types';
+import { Teacher, Language, Institution } from 'types';
 import { t } from 'translations';
 
 interface TeachersProps {
   lang: Language;
-  madrasah: Madrasah | null;
+  madrasah: Institution | null;
   onBack: () => void;
 }
 
@@ -40,7 +40,7 @@ const Teachers: React.FC<TeachersProps> = ({ lang, madrasah, onBack }) => {
   const fetchTeachers = async () => {
     if (!madrasah) return;
     try {
-      const { data } = await supabase.from('teachers').select('*').eq('madrasah_id', madrasah.id).order('created_at', { ascending: false });
+      const { data } = await supabase.from('teachers').select('*').eq('institution_id', madrasah.id).order('created_at', { ascending: false });
       if (data) setTeachers(data);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
@@ -57,7 +57,7 @@ const Teachers: React.FC<TeachersProps> = ({ lang, madrasah, onBack }) => {
       let query = supabase
         .from('teachers')
         .select('id, phone, login_code')
-        .eq('madrasah_id', madrasah.id)
+        .eq('institution_id', madrasah.id)
         .or(`phone.eq.${cleanPhone},login_code.eq.${cleanCode}`);
       
       if (editId) {
@@ -85,7 +85,7 @@ const Teachers: React.FC<TeachersProps> = ({ lang, madrasah, onBack }) => {
       }
 
       const payload = {
-        madrasah_id: madrasah.id,
+        institution_id: madrasah.id,
         name: name.trim(),
         phone: cleanPhone,
         login_code: cleanCode,

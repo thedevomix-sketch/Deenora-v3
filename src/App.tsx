@@ -83,7 +83,7 @@ const App: React.FC = () => {
                   lang={lang} 
                   dataVersion={dataVersion} 
                   triggerRefresh={triggerRefresh} 
-                  madrasahId={madrasah?.id} 
+                  institutionId={madrasah?.id} 
                   onNavigateToWallet={() => setView('wallet-sms')}
                   onNavigateToAccounting={() => setView('accounting')}
                   onNavigateToAttendance={() => setView('attendance')}
@@ -105,7 +105,7 @@ const App: React.FC = () => {
                   triggerRefresh={triggerRefresh} 
                   canAdd={role !== 'teacher'}
                   canSendSMS={role !== 'teacher'}
-                  madrasahId={madrasah?.id}
+                  institutionId={madrasah?.id}
                 />;
       case 'student-details':
         if (!selectedStudent) { setView('home'); return null; }
@@ -115,7 +115,7 @@ const App: React.FC = () => {
                   onBack={() => setView('students')} 
                   lang={lang} 
                   readOnly={role === 'teacher'}
-                  madrasahId={madrasah?.id}
+                  institutionId={madrasah?.id}
                   triggerRefresh={triggerRefresh}
                 />;
       case 'student-form':
@@ -147,7 +147,7 @@ const App: React.FC = () => {
                   lang={lang} 
                   dataVersion={dataVersion} 
                   triggerRefresh={triggerRefresh} 
-                  madrasahId={madrasah?.id} 
+                  institutionId={madrasah?.id} 
                   onNavigateToWallet={() => setView('wallet-sms')}
                   onNavigateToAccounting={() => setView('accounting')}
                   onNavigateToAttendance={() => setView('attendance')}

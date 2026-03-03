@@ -20,7 +20,8 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "*": ["src/*"]
+      "*": ["src/*"],
+      "lib/*": ["lib/*"]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true

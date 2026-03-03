@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Home, User, BookOpen, Wallet, ShieldCheck, BarChart3, CreditCard, RefreshCw, Smartphone, Bell, X, Info, AlertTriangle, CheckCircle2, Clock, Calculator, ClipboardList, GraduationCap, Banknote, MessageSquare } from 'lucide-react';
-import { View, Language, Madrasah, Transaction, Profile } from 'types';
+import { View, Language, Institution, Transaction, Profile } from 'types';
 import { t } from 'translations';
 import { supabase } from 'supabase';
 
@@ -10,7 +10,7 @@ interface LayoutProps {
   currentView: View;
   setView: (view: View) => void;
   lang: Language;
-  madrasah: Madrasah | null;
+  madrasah: Institution | null;
   profile?: Profile | null;
 }
 
@@ -27,6 +27,16 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, lang, m
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const isSuperAdmin = profile?.role === 'super_admin';
   const role = profile?.role || 'teacher';
+  
+  // Dynamic module configuration
+  const modules = madrasah?.config_json?.modules || {
+    attendance: true,
+    fees: true,
+    results: true,
+    admit_card: true,
+    seat_plan: true,
+    accounting: true
+  };
 
   const fetchDynamicNotifications = async () => {
     if (!madrasah?.id) return;
@@ -64,7 +74,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, lang, m
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-[16px] font-black text-[#1E293B] leading-[1.2] tracking-tight font-noto line-clamp-2">
-              {isSuperAdmin ? (lang === 'bn' ? 'সুপার অ্যাডমিন' : 'Super Admin') : (madrasah?.name || 'Madrasah Portal')}
+              {isSuperAdmin ? (lang === 'bn' ? 'সুপার অ্যাডমিন' : 'Super Admin') : (madrasah?.name || (madrasah?.institution_type === 'school' ? 'School Portal' : 'Madrasah Portal'))}
             </h1>
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1 font-noto">
               {role === 'super_admin' ? 'Super Admin Portal' : role === 'teacher' ? 'Teacher Portal' : role === 'accountant' ? 'Accounts Portal' : 'Admin Portal'}
@@ -106,15 +116,19 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, lang, m
             </>
           ) : (
             <>
-              <button onClick={() => setView('attendance')} className={`relative flex flex-col items-center gap-1 transition-all flex-1 ${isTabActive('attendance') ? 'text-[#2563EB]' : 'text-[#94A3B8]'}`}>
-                <ClipboardList size={20} />
-                <span className="text-[9px] font-black font-noto opacity-80">হাজিরা</span>
-              </button>
-              <button onClick={() => setView('exams')} className={`relative flex flex-col items-center gap-1 transition-all flex-1 ${isTabActive('exams') ? 'text-[#2563EB]' : 'text-[#94A3B8]'}`}>
-                <GraduationCap size={20} />
-                <span className="text-[9px] font-black font-noto opacity-80">পরীক্ষা</span>
-              </button>
-              {(role === 'madrasah_admin' || role === 'accountant') && (
+              {modules.attendance && (
+                <button onClick={() => setView('attendance')} className={`relative flex flex-col items-center gap-1 transition-all flex-1 ${isTabActive('attendance') ? 'text-[#2563EB]' : 'text-[#94A3B8]'}`}>
+                  <ClipboardList size={20} />
+                  <span className="text-[9px] font-black font-noto opacity-80">হাজিরা</span>
+                </button>
+              )}
+              {modules.results && (
+                <button onClick={() => setView('exams')} className={`relative flex flex-col items-center gap-1 transition-all flex-1 ${isTabActive('exams') ? 'text-[#2563EB]' : 'text-[#94A3B8]'}`}>
+                  <GraduationCap size={20} />
+                  <span className="text-[9px] font-black font-noto opacity-80">পরীক্ষা</span>
+                </button>
+              )}
+              {modules.accounting && (role === 'madrasah_admin' || role === 'accountant') && (
                 <button onClick={() => setView('accounting')} className={`relative flex flex-col items-center gap-1 transition-all flex-1 ${isTabActive('accounting') ? 'text-[#2563EB]' : 'text-[#94A3B8]'}`}>
                   <Banknote size={20} />
                   <span className="text-[9px] font-black font-noto opacity-80">হিসাব</span>

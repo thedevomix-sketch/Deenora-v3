@@ -42,14 +42,14 @@ export const SMSService = {
     }
   },
 
-  sendBulk: async (madrasahId: string, students: Student[], message: string) => {
+  sendBulk: async (institutionId: string, students: Student[], message: string) => {
     const [mRes, global] = await Promise.all([
-      supabase.from('madrasahs').select('sms_balance, reve_api_key, reve_secret_key, reve_caller_id, reve_client_id').eq('id', madrasahId).single(),
+      supabase.from('institutions').select('sms_balance, reve_api_key, reve_secret_key, reve_caller_id, reve_client_id').eq('id', institutionId).single(),
       SMSService.getGlobalSettings()
     ]);
 
     const mData = mRes.data;
-    if (!mData) throw new Error("Security Violation: Unauthorized Madrasah context.");
+    if (!mData) throw new Error("Security Violation: Unauthorized Institution context.");
     
     const { parts } = getSmsLengthInfo(message);
     if (parts > 7) throw new Error("SMS length exceeds the maximum limit of 7 parts.");
@@ -66,7 +66,7 @@ export const SMSService = {
     }
 
     const { data: rpcData, error: rpcError } = await supabase.rpc('send_bulk_sms_rpc', {
-      p_madrasah_id: madrasahId,
+      p_institution_id: institutionId,
       p_student_ids: studentIds,
       p_message: message
     });
@@ -98,18 +98,18 @@ export const SMSService = {
     return { success: true };
   },
 
-  sendDirect: async (phone: string, message: string, madrasahId?: string) => {
+  sendDirect: async (phone: string, message: string, institutionId?: string) => {
     const global = await SMSService.getGlobalSettings();
     let apiKey = global.reve_api_key;
     let secretKey = global.reve_secret_key;
     let callerId = global.reve_caller_id;
     let clientId = global.reve_client_id;
 
-    if (madrasahId) {
+    if (institutionId) {
       const { data } = await supabase
-        .from('madrasahs')
+        .from('institutions')
         .select('reve_api_key, reve_secret_key, reve_caller_id, reve_client_id')
-        .eq('id', madrasahId)
+        .eq('id', institutionId)
         .maybeSingle();
         
       if (data) {

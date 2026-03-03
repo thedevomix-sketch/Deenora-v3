@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { LogOut, Camera, Loader2, User as UserIcon, ShieldCheck, Database, ChevronRight, Check, MessageSquare, Zap, Globe, Smartphone, Save, Users, Layers, Edit3, UserPlus, Languages, Mail, Key, Settings, Fingerprint, Copy, History, Server, CreditCard, Shield, Sliders, Activity, Bell, RefreshCw, AlertTriangle, GraduationCap, ChevronLeft, ArrowRight, LayoutDashboard, Settings2, X, Sparkles, Box, ShieldAlert, Award, CheckCircle2, Lock, Terminal, Cpu } from 'lucide-react';
 import { supabase, smsApi } from 'supabase';
-import { Madrasah, Language, View } from 'types';
+import { Institution, Language, View } from 'types';
 import { t } from 'translations';
 
 interface AccountProps {
@@ -12,13 +12,13 @@ interface AccountProps {
   onProfileUpdate?: () => void;
   setView: (view: View) => void;
   isSuperAdmin?: boolean;
-  initialMadrasah: Madrasah | null;
+  initialMadrasah: Institution | null;
   onLogout: () => void;
   isTeacher?: boolean;
 }
 
 const Account: React.FC<AccountProps> = ({ lang, setLang, onProfileUpdate, setView, isSuperAdmin, initialMadrasah, onLogout, isTeacher }) => {
-  const [madrasah, setMadrasah] = useState<Madrasah | null>(initialMadrasah);
+  const [madrasah, setMadrasah] = useState<Institution | null>(initialMadrasah);
   const [saving, setSaving] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingGlobal, setIsEditingGlobal] = useState(false);
@@ -66,12 +66,12 @@ const Account: React.FC<AccountProps> = ({ lang, setLang, onProfileUpdate, setVi
     if (!initialMadrasah) return;
     setLoadingStats(true);
     try {
-      const { data: profile } = await supabase.from('madrasahs').select('*').eq('id', initialMadrasah.id).maybeSingle();
+      const { data: profile } = await supabase.from('institutions').select('*').eq('id', initialMadrasah.id).maybeSingle();
       if (profile) setMadrasah(profile);
       const [stdRes, clsRes, teaRes] = await Promise.all([
-        supabase.from('students').select('*', { count: 'exact', head: true }).eq('madrasah_id', initialMadrasah.id),
-        supabase.from('classes').select('*', { count: 'exact', head: true }).eq('madrasah_id', initialMadrasah.id),
-        supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('madrasah_id', initialMadrasah.id)
+        supabase.from('students').select('*', { count: 'exact', head: true }).eq('institution_id', initialMadrasah.id),
+        supabase.from('classes').select('*', { count: 'exact', head: true }).eq('institution_id', initialMadrasah.id),
+        supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('institution_id', initialMadrasah.id)
       ]);
       setStats({ students: stdRes.count || 0, classes: clsRes.count || 0, teachers: teaRes.count || 0 });
     } catch (e) { console.error(e); } finally { setLoadingStats(false); }
@@ -97,7 +97,7 @@ const Account: React.FC<AccountProps> = ({ lang, setLang, onProfileUpdate, setVi
     if (!madrasah || isTeacher) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from('madrasahs').update({ 
+      const { error } = await supabase.from('institutions').update({ 
         name: newName.trim(), 
         phone: newPhone.trim(), 
         login_code: newLoginCode.trim(), 
@@ -140,7 +140,7 @@ const Account: React.FC<AccountProps> = ({ lang, setLang, onProfileUpdate, setVi
       const { error: uploadError } = await supabase.storage.from('madrasah-assets').upload(`logos/${fileName}`, file);
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from('madrasah-assets').getPublicUrl(`logos/${fileName}`);
-      await supabase.from('madrasahs').update({ logo_url: publicUrl }).eq('id', madrasah.id);
+      await supabase.from('institutions').update({ logo_url: publicUrl }).eq('id', madrasah.id);
       setLogoUrl(publicUrl);
       if (onProfileUpdate) onProfileUpdate();
     } catch (e: any) { alert(e.message); } finally { setSaving(false); }

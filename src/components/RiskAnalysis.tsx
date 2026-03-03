@@ -20,25 +20,25 @@ interface RiskData {
 }
 
 interface RiskAnalysisProps {
-  madrasahId: string;
+  institutionId: string;
   lang: Language;
   onStudentClick: (student: any) => void;
 }
 
-const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ madrasahId, lang, onStudentClick }) => {
+const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ institutionId, lang, onStudentClick }) => {
   const [risks, setRisks] = useState<RiskData[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     fetchRisks();
-  }, [madrasahId]);
+  }, [institutionId]);
 
   const fetchRisks = async () => {
-    if (!isValidUUID(madrasahId)) return;
+    if (!isValidUUID(institutionId)) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_student_risk_analysis', { p_madrasah_id: madrasahId });
+      const { data, error } = await supabase.rpc('get_student_risk_analysis', { p_institution_id: institutionId });
       if (error) throw error;
       if (data) setRisks(data);
     } catch (err) {

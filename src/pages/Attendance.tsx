@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase, smsApi } from 'supabase';
-import { Madrasah, Class, Student, Language, Attendance as AttendanceType } from 'types';
+import { Institution, Class, Student, Language, Attendance as AttendanceType } from 'types';
 import { ClipboardList, Users, CheckCircle, XCircle, Clock, Loader2, ArrowLeft, ChevronDown, Save, Calendar, BarChart3, Send, AlertTriangle, FileText, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { sortMadrasahClasses } from 'pages/Classes';
 import { t } from 'translations';
 
 interface AttendanceProps {
   lang: Language;
-  madrasah: Madrasah | null;
+  madrasah: Institution | null;
   onBack: () => void;
   userId: string;
 }
@@ -43,7 +43,7 @@ const Attendance: React.FC<AttendanceProps> = ({ lang, madrasah, onBack, userId 
   }, [selectedClass?.id, activeTab, date, selectedMonth, reportType, selectedYear]);
 
   const fetchClasses = async () => {
-    const { data } = await supabase.from('classes').select('*').eq('madrasah_id', madrasah?.id);
+    const { data } = await supabase.from('classes').select('*').eq('institution_id', madrasah?.id);
     if (data) setClasses(sortMadrasahClasses(data));
   };
 
@@ -110,7 +110,7 @@ const Attendance: React.FC<AttendanceProps> = ({ lang, madrasah, onBack, userId 
       if (delError) throw delError;
 
       const payload = Object.entries(attendance).map(([sid, status]) => ({
-        madrasah_id: madrasah.id,
+        institution_id: madrasah.id,
         class_id: selectedClass.id,
         student_id: sid,
         status: status,

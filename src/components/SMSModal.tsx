@@ -2,13 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Send, MessageSquare, Loader2, AlertCircle, CheckCircle2, ChevronDown, BookOpen } from 'lucide-react';
 import { t } from 'translations';
-import { Language, Student, Madrasah, SMSTemplate } from 'types';
+import { Language, Student, Institution, SMSTemplate } from 'types';
 import { supabase, smsApi } from 'supabase';
 import { getSmsLengthInfo } from 'utils/smsUtils';
 
 interface SMSModalProps {
   students: Student[];
-  madrasah: Madrasah;
+  madrasah: Institution;
   lang: Language;
   onClose: () => void;
   onSuccess: () => void;
@@ -25,7 +25,7 @@ const SMSModal: React.FC<SMSModalProps> = ({ students, madrasah, lang, onClose, 
   useEffect(() => { fetchTemplates(); }, [madrasah.id]);
 
   const fetchTemplates = async () => {
-    const { data } = await supabase.from('sms_templates').select('*').eq('madrasah_id', madrasah.id).order('created_at', { ascending: false });
+    const { data } = await supabase.from('sms_templates').select('*').eq('institution_id', madrasah.id).order('created_at', { ascending: false });
     if (data) setTemplates(data);
   };
 

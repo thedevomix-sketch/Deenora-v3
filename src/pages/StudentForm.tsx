@@ -3,13 +3,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, Save, User as UserIcon, Phone, List, Hash, Loader2, ChevronDown, Camera, X, Check, UserCheck, AlertCircle, BookOpen } from 'lucide-react';
 import { supabase, offlineApi } from 'supabase';
-import { Student, Class, Language, Madrasah } from 'types';
+import { Student, Class, Language, Institution } from 'types';
 import { t } from 'translations';
 import { sortMadrasahClasses } from 'pages/Classes';
 
 interface StudentFormProps {
   student?: Student | null;
-  madrasah: Madrasah | null;
+  madrasah: Institution | null;
   defaultClassId?: string;
   isEditing: boolean;
   onSuccess: () => void;
@@ -40,7 +40,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultCla
     if (cached) setClasses(sortMadrasahClasses(cached));
 
     if (navigator.onLine && madrasah) {
-      const { data } = await supabase.from('classes').select('*').eq('madrasah_id', madrasah.id);
+      const { data } = await supabase.from('classes').select('*').eq('institution_id', madrasah.id);
       if (data) {
         const sorted = sortMadrasahClasses(data);
         setClasses(sorted);
@@ -78,7 +78,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultCla
         guardian_phone: phone.trim(),
         guardian_phone_2: phone2.trim() || null,
         class_id: classId,
-        madrasah_id: madrasah.id
+        institution_id: madrasah.id
       };
 
       if (navigator.onLine) {

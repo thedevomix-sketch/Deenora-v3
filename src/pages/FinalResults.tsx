@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from 'supabase';
-import { Madrasah, Class, Exam, FinalResult, FinalResultExam, Language, UserRole, Student } from 'types';
+import { Institution, Class, Exam, FinalResult, FinalResultExam, Language, UserRole, Student } from 'types';
 import { ArrowLeft, Plus, Save, Trash2, Download, Loader2, Calculator, Check, X, AlertCircle } from 'lucide-react';
 import { t } from 'translations';
 import { generateFinalResultPDF } from '../utils/pdfGenerator';
 
 interface FinalResultsProps {
   lang: Language;
-  madrasah: Madrasah | null;
+  madrasah: Institution | null;
   onBack: () => void;
   role: UserRole;
 }
@@ -51,7 +51,7 @@ const FinalResults: React.FC<FinalResultsProps> = ({ lang, madrasah, onBack, rol
   }, [viewResult]);
 
   const fetchClasses = async () => {
-    const { data } = await supabase.from('classes').select('*').eq('madrasah_id', madrasah?.id);
+    const { data } = await supabase.from('classes').select('*').eq('institution_id', madrasah?.id);
     if (data) setClasses(data);
   };
 
@@ -80,7 +80,7 @@ const FinalResults: React.FC<FinalResultsProps> = ({ lang, madrasah, onBack, rol
 
     const newResult: FinalResult = {
       id: crypto.randomUUID(),
-      madrasah_id: madrasah!.id,
+      institution_id: madrasah!.id,
       class_id: selectedClassId,
       title,
       created_at: new Date().toISOString(),

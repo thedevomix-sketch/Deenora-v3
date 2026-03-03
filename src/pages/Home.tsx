@@ -15,7 +15,7 @@ interface HomeProps {
   lang: Language;
   dataVersion: number;
   triggerRefresh: () => void;
-  madrasahId?: string;
+  institutionId?: string;
   onNavigateToWallet?: () => void;
   onNavigateToAccounting?: () => void;
   onNavigateToAttendance?: () => void;
@@ -24,7 +24,7 @@ interface HomeProps {
   onNavigateToTeachers?: () => void;
 }
 
-const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerRefresh, madrasahId, onNavigateToWallet, onNavigateToAccounting, onNavigateToAttendance, onNavigateToExams, onNavigateToClasses, onNavigateToTeachers }) => {
+const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerRefresh, institutionId, onNavigateToWallet, onNavigateToAccounting, onNavigateToAttendance, onNavigateToExams, onNavigateToClasses, onNavigateToTeachers }) => {
   const [fetchError, setFetchError] = useState<string | null>(null);
   
   const [stats, setStats] = useState({
@@ -40,16 +40,16 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
   const [isClearing, setIsClearing] = useState(false);
 
   const fetchDashboardStats = async () => {
-    if (!isValidUUID(madrasahId)) return;
+    if (!isValidUUID(institutionId)) return;
     setLoadingStats(true);
     try {
       const today = new Date().toISOString().split('T')[0];
       const [stdRes, clsRes, teaRes, mRes, attRes] = await Promise.all([
-        supabase.from('students').select('*', { count: 'exact', head: true }).eq('madrasah_id', madrasahId),
-        supabase.from('classes').select('*', { count: 'exact', head: true }).eq('madrasah_id', madrasahId),
-        supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('madrasah_id', madrasahId),
-        supabase.from('madrasahs').select('sms_balance').eq('id', madrasahId).maybeSingle(),
-        supabase.from('attendance').select('*', { count: 'exact', head: true }).eq('madrasah_id', madrasahId).eq('date', today).eq('status', 'present')
+        supabase.from('students').select('*', { count: 'exact', head: true }).eq('institution_id', institutionId),
+        supabase.from('classes').select('*', { count: 'exact', head: true }).eq('institution_id', institutionId),
+        supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('institution_id', institutionId),
+        supabase.from('institutions').select('sms_balance').eq('id', institutionId).maybeSingle(),
+        supabase.from('attendance').select('*', { count: 'exact', head: true }).eq('institution_id', institutionId).eq('date', today).eq('status', 'present')
       ]);
 
       setStats({
@@ -68,7 +68,7 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
 
   useEffect(() => { 
     fetchDashboardStats();
-  }, [dataVersion, madrasahId]);
+  }, [dataVersion, institutionId]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
@@ -100,10 +100,10 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
         </button>
       </div>
 
-      {madrasahId && (
+      {institutionId && (
         <div className="space-y-6">
           <RiskAnalysis 
-            madrasahId={madrasahId} 
+            institutionId={institutionId} 
             lang={lang} 
             onStudentClick={onStudentClick} 
           />
@@ -113,7 +113,7 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
                {t('smart_fee_mgmt', lang)}
              </h2>
              <SmartFeeAnalytics 
-               madrasahId={madrasahId} 
+               institutionId={institutionId} 
                lang={lang} 
                month={new Date().toISOString().slice(0, 7)} 
              />
@@ -124,7 +124,7 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
                Result Insights
              </h2>
              <SmartResultAnalytics 
-               madrasahId={madrasahId} 
+               institutionId={institutionId} 
                lang={lang} 
              />
           </div>

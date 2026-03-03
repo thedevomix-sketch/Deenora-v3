@@ -7,11 +7,28 @@ export type Language = 'bn' | 'en';
 
 export type UserRole = 'super_admin' | 'madrasah_admin' | 'teacher' | 'accountant';
 
-export interface Madrasah {
+export interface Institution {
   id: string;
   name: string;
   phone?: string;
   logo_url?: string;
+  institution_type: 'madrasah' | 'school' | 'kindergarten' | 'nurani' | 'system';
+  config_json: {
+    modules: {
+      attendance: boolean;
+      fees: boolean;
+      results: boolean;
+      admit_card: boolean;
+      seat_plan: boolean;
+      accounting: boolean;
+    };
+    result_system: 'grading' | 'marks' | 'hifz';
+    attendance_type: 'daily' | 'period';
+    fee_structure: 'monthly' | 'session';
+    ui_mode: 'madrasah' | 'school';
+  };
+  theme: string;
+  status: 'active' | 'suspended' | 'trial';
   is_active: boolean;
   is_super_admin: boolean;
   created_at: string;
@@ -27,7 +44,7 @@ export interface Madrasah {
 
 export interface Profile {
   id: string;
-  madrasah_id: string;
+  institution_id: string;
   full_name: string;
   role: UserRole;
   is_active: boolean;
@@ -36,7 +53,7 @@ export interface Profile {
 
 export interface Class {
   id: string;
-  madrasah_id: string;
+  institution_id: string;
   class_name: string;
   sort_order?: number | null;
   created_at?: string;
@@ -44,7 +61,7 @@ export interface Class {
 
 export interface Student {
   id: string;
-  madrasah_id: string;
+  institution_id: string;
   class_id: string;
   student_name: string;
   roll: number | null;
@@ -58,7 +75,7 @@ export interface Student {
 
 export interface Exam {
   id: string;
-  madrasah_id: string;
+  institution_id: string;
   class_id: string;
   exam_name: string;
   exam_date: string;
@@ -85,7 +102,7 @@ export interface ExamMark {
 
 export interface Teacher {
   id: string;
-  madrasah_id: string;
+  institution_id: string;
   name: string;
   phone: string;
   login_code: string;
@@ -101,7 +118,7 @@ export interface Teacher {
 
 export interface Attendance {
   id: string;
-  madrasah_id: string;
+  institution_id: string;
   student_id: string;
   status: 'present' | 'absent' | 'late';
   date: string;
@@ -111,7 +128,7 @@ export interface Attendance {
 
 export interface LedgerEntry {
   id: string;
-  madrasah_id: string;
+  institution_id: string;
   type: 'income' | 'expense';
   category: string;
   amount: number;
@@ -122,7 +139,7 @@ export interface LedgerEntry {
 
 export interface FeeStructure {
   id: string;
-  madrasah_id: string;
+  institution_id: string;
   class_id: string;
   fee_name: string;
   amount: number;
@@ -131,7 +148,7 @@ export interface FeeStructure {
 
 export interface Fee {
   id: string;
-  madrasah_id: string;
+  institution_id: string;
   student_id: string;
   class_id: string;
   amount_paid: number;
@@ -160,7 +177,7 @@ export interface SeatAssignment {
 
 export interface FinalResult {
   id: string;
-  madrasah_id: string;
+  institution_id: string;
   class_id: string;
   title: string;
   created_at: string;
@@ -205,7 +222,7 @@ export interface AppState {
 
 export interface Transaction {
   id: string;
-  madrasah_id: string;
+  institution_id: string;
   amount: number;
   transaction_id: string;
   sender_phone: string;
@@ -213,7 +230,7 @@ export interface Transaction {
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   sms_count?: number;
-  madrasahs?: Madrasah;
+  institutions?: Institution;
 }
 
 export interface AdminSMSStock {
@@ -224,7 +241,7 @@ export interface AdminSMSStock {
 
 export interface SMSTemplate {
   id: string;
-  madrasah_id: string;
+  institution_id: string;
   title: string;
   body: string;
   created_at: string;

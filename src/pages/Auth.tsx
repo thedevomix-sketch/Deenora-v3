@@ -38,9 +38,9 @@ const Auth: React.FC<AuthProps> = ({ lang }) => {
       if (data.user) {
         localStorage.removeItem('teacher_session');
         offlineApi.removeCache('profile');
-        // Use maybeSingle instead of single to handle super admins who don't have a madrasah entry
+        // Use maybeSingle instead of single to handle super admins who don't have a institution entry
         if (isValidUUID(data.user.id)) {
-          const { data: profile } = await supabase.from('madrasahs').select('name').eq('id', data.user.id).maybeSingle();
+          const { data: profile } = await supabase.from('institutions').select('name').eq('id', data.user.id).maybeSingle();
           if (profile) localStorage.setItem('m_name', profile.name);
           else localStorage.setItem('m_name', 'Super Admin'); // Default name for super admin
         } else {
@@ -64,7 +64,7 @@ const Auth: React.FC<AuthProps> = ({ lang }) => {
       
       const { data, error: fetchError } = await supabase
         .from('teachers')
-        .select('*, madrasahs(*)')
+        .select('*, institutions(*)')
         .eq('phone', cleanPhone)
         .eq('login_code', code.trim())
         .eq('is_active', true)

@@ -17,13 +17,13 @@ interface StudentsProps {
   canAdd?: boolean;
   canSendSMS?: boolean;
   teacher?: Teacher | null;
-  madrasahId?: string;
+  institutionId?: string;
   onNavigateToWallet?: () => void;
 }
 
 const PAGE_SIZE = 50;
 
-const Students: React.FC<StudentsProps> = ({ selectedClass, onStudentClick, onAddClick, onBack, lang, dataVersion, triggerRefresh, canAdd, canSendSMS, teacher, madrasahId, onNavigateToWallet }) => {
+const Students: React.FC<StudentsProps> = ({ selectedClass, onStudentClick, onAddClick, onBack, lang, dataVersion, triggerRefresh, canAdd, canSendSMS, teacher, institutionId, onNavigateToWallet }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -43,14 +43,14 @@ const Students: React.FC<StudentsProps> = ({ selectedClass, onStudentClick, onAd
 
   // Fetch Templates (Cached)
   const fetchTemplates = useCallback(async () => {
-    if (!madrasahId) return;
-    const { data } = await supabase.from('sms_templates').select('id, title, body').eq('madrasah_id', madrasahId);
+    if (!institutionId) return;
+    const { data } = await supabase.from('sms_templates').select('id, title, body').eq('institution_id', institutionId);
     if (data) setTemplates(data);
-  }, [madrasahId]);
+  }, [institutionId]);
 
   // Paginated Fetching
   const fetchStudents = useCallback(async (reset = false) => {
-    if (!madrasahId) return;
+    if (!institutionId) return;
     if (reset) { setLoading(true); setPage(0); } else { setLoadingMore(true); }
 
     const currentPage = reset ? 0 : page;
@@ -58,11 +58,11 @@ const Students: React.FC<StudentsProps> = ({ selectedClass, onStudentClick, onAd
     const to = from + PAGE_SIZE - 1;
 
     try {
-      // Fix: Add madrasah_id to the select query to satisfy the Student type requirements.
+      // Fix: Add institution_id to the select query to satisfy the Student type requirements.
       let query = supabase
         .from('students')
-        .select('id, madrasah_id, student_name, guardian_phone, roll, guardian_name, class_id, classes(class_name)')
-        .eq('madrasah_id', madrasahId)
+        .select('id, institution_id, student_name, guardian_phone, roll, guardian_name, class_id, classes(class_name)')
+        .eq('institution_id', institutionId)
         .eq('class_id', selectedClass.id)
         .order('roll', { ascending: true })
         .range(from, to);
@@ -90,7 +90,7 @@ const Students: React.FC<StudentsProps> = ({ selectedClass, onStudentClick, onAd
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [madrasahId, selectedClass.id, page, searchQuery]);
+  }, [institutionId, selectedClass.id, page, searchQuery]);
 
   useEffect(() => {
     const timer = setTimeout(() => fetchStudents(true), 400); // Optimized debounced search
@@ -99,7 +99,7 @@ const Students: React.FC<StudentsProps> = ({ selectedClass, onStudentClick, onAd
 
   useEffect(() => {
     fetchTemplates();
-  }, [madrasahId, fetchTemplates]);
+  }, [institutionId, fetchTemplates]);
 
   const toggleSelectAll = () => {
     if (selectedIds.size === students.length) {
@@ -110,11 +110,11 @@ const Students: React.FC<StudentsProps> = ({ selectedClass, onStudentClick, onAd
   };
 
   const handlePremiumSMS = async () => {
-    if (!selectedTemplate || selectedIds.size === 0 || !madrasahId) return;
+    if (!selectedTemplate || selectedIds.size === 0 || !institutionId) return;
     setSending(true);
     try {
       const selectedStudents = students.filter(s => selectedIds.has(s.id));
-      await smsApi.sendBulk(madrasahId, selectedStudents, selectedTemplate.body);
+      await smsApi.sendBulk(institutionId, selectedStudents, selectedTemplate.body);
       setStatusModal({ show: true, type: 'success', title: 'সাফল্য', message: t('sms_success', lang) });
       setIsSelectionMode(false);
       setSelectedIds(new Set());

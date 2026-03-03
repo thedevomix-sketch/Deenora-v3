@@ -4,9 +4,9 @@ import { createPortal } from 'react-dom';
 // Fix: Import icons from lucide-react instead of ../supabase
 import { Loader2, Search, ChevronRight, User as UserIcon, ShieldCheck, Database, Globe, CheckCircle, XCircle, CreditCard, Save, X, Settings, Smartphone, MessageSquare, Key, Shield, ArrowLeft, Copy, Check, Calendar, Users, Layers, MonitorSmartphone, Server, BarChart3, TrendingUp, RefreshCcw, Clock, Hash, History as HistoryIcon, Zap, Activity, PieChart, Users2, CheckCircle2, AlertCircle, AlertTriangle, RefreshCw, Trash2, Sliders, ToggleLeft, ToggleRight, GraduationCap, Banknote, PhoneCall } from 'lucide-react';
 import { supabase, smsApi } from 'supabase';
-import { Madrasah, Language, Transaction, AdminSMSStock } from 'types';
+import { Institution, Language, Transaction, AdminSMSStock } from 'types';
 
-interface MadrasahWithStats extends Madrasah {
+interface InstitutionWithStats extends Institution {
   student_count?: number;
   class_count?: number;
 }
@@ -18,7 +18,7 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dataVersion = 0 }) => {
-  const [madrasahs, setMadrasahs] = useState<MadrasahWithStats[]>([]);
+  const [madrasahs, setMadrasahs] = useState<InstitutionWithStats[]>([]);
   const [pendingTrans, setPendingTrans] = useState<Transaction[]>([]);
   const [transactionHistory, setTransactionHistory] = useState<Transaction[]>([]);
   const [adminStock, setAdminStock] = useState<AdminSMSStock | null>(null);
@@ -50,7 +50,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     totalSentSMS: 0,
     currentInUserWallets: 0 
   });
-  const [selectedUser, setSelectedUser] = useState<MadrasahWithStats | null>(null);
+  const [selectedUser, setSelectedUser] = useState<InstitutionWithStats | null>(null);
   const [userStats, setUserStats] = useState({ students: 0, classes: 0, teachers: 0 });
   
   const [editName, setEditName] = useState('');
@@ -70,7 +70,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
       supabase.from('classes').select('*', { count: 'exact', head: true }),
       supabase.from('teachers').select('*', { count: 'exact', head: true }),
       supabase.from('transactions').select('sms_count').eq('status', 'approved'),
-      supabase.from('madrasahs').select('sms_balance')
+      supabase.from('institutions').select('sms_balance')
     ]);
 
     const totalAllocated = smsAllocRes.data?.reduce((sum, t) => sum + (Number(t.sms_count) || 0), 0) || 0;
@@ -93,7 +93,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   };
 
   const fetchAllMadrasahs = async () => {
-    const { data, error } = await supabase.from('madrasahs')
+    const { data, error } = await supabase.from('institutions')
       .select('*')
       .eq('is_super_admin', false)
       .order('created_at', { ascending: false });
@@ -103,13 +103,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   };
 
   const fetchPendingTransactions = async () => {
-    const { data } = await supabase.from('transactions').select('*, madrasahs(*)').eq('status', 'pending').order('created_at', { ascending: false });
+    const { data } = await supabase.from('transactions').select('*, institutions(*)').eq('status', 'pending').order('created_at', { ascending: false });
     return data || [];
   };
 
   const fetchTransactionHistory = async () => {
     const { data } = await supabase.from('transactions')
-      .select('*, madrasahs(*)')
+      .select('*, institutions(*)')
       .neq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(50);
@@ -174,7 +174,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   }, [currentView]);
 
   // Fix: Add missing handleUserClick function to manage details view and stats
-  const handleUserClick = async (user: MadrasahWithStats) => {
+  const handleUserClick = async (user: InstitutionWithStats) => {
     setSelectedUser(user);
     setEditName(user.name || '');
     setEditPhone(user.phone || '');
@@ -190,9 +190,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     setUserStats({ students: 0, classes: 0, teachers: 0 });
     try {
       const [stdRes, clsRes, teaRes] = await Promise.all([
-        supabase.from('students').select('*', { count: 'exact', head: true }).eq('madrasah_id', user.id),
-        supabase.from('classes').select('*', { count: 'exact', head: true }).eq('madrasah_id', user.id),
-        supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('madrasah_id', user.id)
+        supabase.from('students').select('*', { count: 'exact', head: true }).eq('institution_id', user.id),
+        supabase.from('classes').select('*', { count: 'exact', head: true }).eq('institution_id', user.id),
+        supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('institution_id', user.id)
       ]);
       setUserStats({
         students: stdRes.count || 0,
@@ -209,7 +209,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     if (!selectedUser) return;
     setIsUpdatingUser(true);
     try {
-      const { error } = await supabase.from('madrasahs').update({
+      const { error } = await supabase.from('institutions').update({
         name: editName.trim(),
         phone: editPhone.trim(),
         login_code: editLoginCode.trim(),
@@ -243,7 +243,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
       // ১. ডাটাবেসে পেমেন্ট অনুমোদন করা (RPC handles transactions, madrasahs balance and admin stock)
       const { data, error } = await supabase.rpc('approve_payment_with_sms', { 
         t_id: tr.id, 
-        m_id: tr.madrasah_id, 
+        m_id: tr.institution_id, 
         sms_to_give: sms 
       });
       
@@ -258,7 +258,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
       // ২. ইউজারকে কনফার্মেশন SMS পাঠানো (যদি টগল চালু থাকে)
       const isSmsEnabled = smsEnabledMap[tr.id] !== false;
       if (isSmsEnabled) {
-        const userPhone = tr.madrasahs?.phone || tr.sender_phone;
+        const userPhone = tr.institutions?.phone || tr.sender_phone;
         if (userPhone) {
           const msg = `আস-সালামু আলাইকুম, আপনার পেমেন্ট অনুমোদিত হয়েছে। আপনার অ্যাকাউন্টে ${sms} টি SMS যোগ করা হয়েছে। ধন্যবাদ।`;
           // Fire and forget SMS to avoid blocking UI
@@ -299,7 +299,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
       const { error } = await supabase.from('transactions').update({ status: 'rejected' }).eq('id', rejectConfirm.id);
       if (error) throw error;
       
-      const userPhone = rejectConfirm.madrasahs?.phone || rejectConfirm.sender_phone;
+      const userPhone = rejectConfirm.institutions?.phone || rejectConfirm.sender_phone;
       if (userPhone) {
         const msg = `দুঃখিত, আপনার পেমেন্ট রিকোয়েস্টটি (${rejectConfirm.amount} ৳) বাতিল করা হয়েছে। বিস্তারিত জানতে যোগাযোগ করুন।`;
         smsApi.sendDirect(userPhone, msg).catch(err => console.error("SMS Send Error:", err));
@@ -462,7 +462,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                         </div>
                       </div>
                       <div className="px-1 space-y-1">
-                        <p className="text-[15px] font-black text-[#1E3A8A] font-noto">{tr.madrasahs?.name}</p>
+                        <p className="text-[15px] font-black text-[#1E3A8A] font-noto">{tr.institutions?.name}</p>
                         <div className="flex flex-col gap-0.5">
                            <p className="text-[10px] font-bold text-slate-400">TrxID: <span className="text-[#2563EB]">{tr.transaction_id}</span></p>
                            <p className="text-[11px] font-black text-[#1E3A8A] flex items-center gap-1.5">
@@ -535,7 +535,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                                 {tr.status}
                              </span>
                           </div>
-                          <p className="text-[12px] font-black text-[#1E3A8A] font-noto truncate">{tr.madrasahs?.name}</p>
+                          <p className="text-[12px] font-black text-[#1E3A8A] font-noto truncate">{tr.institutions?.name}</p>
                           <p className="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-2">
                              <Smartphone size={10} /> বিকাশ: {tr.sender_phone || 'N/A'}
                              {tr.sms_count && <span className="text-[#2563EB] font-black">({tr.sms_count} SMS)</span>}
@@ -567,7 +567,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                       <ArrowLeft size={24} strokeWidth={3} />
                    </button>
                    <div className="min-w-0">
-                      <h1 className="text-xl font-black text-[#1E293B] font-noto truncate leading-tight">Madrasah Details</h1>
+                      <h1 className="text-xl font-black text-[#1E293B] font-noto truncate leading-tight">Institution Details</h1>
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">UUID: {selectedUser.id}</p>
                    </div>
                 </div>
@@ -605,7 +605,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                    <div className="space-y-6 pt-4 border-t border-slate-50">
                       <div className="grid grid-cols-1 gap-5">
                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Madrasah Name</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Institution Name</label>
                             <input type="text" className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20" value={editName} onChange={(e) => setEditName(e.target.value)} />
                          </div>
                          <div className="grid grid-cols-2 gap-4">
@@ -665,7 +665,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
               </div>
               <h3 className="text-xl font-black text-[#1E3A8A] font-noto tracking-tight">আপনি কি নিশ্চিত?</h3>
               <p className="text-[12px] font-bold text-slate-400 mt-2 font-noto leading-relaxed">
-                 <span className="text-red-500">{rejectConfirm.madrasahs?.name}</span> এর <span className="text-slate-800">{rejectConfirm.amount} ৳</span> রিচার্জ রিকোয়েস্ট বাতিল করতে চাচ্ছেন।
+                 <span className="text-red-500">{rejectConfirm.institutions?.name}</span> এর <span className="text-slate-800">{rejectConfirm.amount} ৳</span> রিচার্জ রিকোয়েস্ট বাতিল করতে চাচ্ছেন।
               </p>
               <div className="flex flex-col gap-2 mt-8">
                  <button onClick={rejectTransaction} disabled={isRejecting} className="w-full py-4 bg-red-500 text-white font-black rounded-full shadow-lg shadow-red-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest">

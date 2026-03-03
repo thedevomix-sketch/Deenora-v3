@@ -7,11 +7,11 @@ import { TrendingUp, TrendingDown, Award, AlertCircle, Loader2, User, ChevronRig
 import { isValidUUID } from 'utils/validation';
 
 interface SmartResultAnalyticsProps {
-  madrasahId: string;
+  institutionId: string;
   lang: Language;
 }
 
-const SmartResultAnalytics: React.FC<SmartResultAnalyticsProps> = ({ madrasahId, lang }) => {
+const SmartResultAnalytics: React.FC<SmartResultAnalyticsProps> = ({ institutionId, lang }) => {
   const [loading, setLoading] = useState(true);
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>('all');
@@ -29,24 +29,24 @@ const SmartResultAnalytics: React.FC<SmartResultAnalyticsProps> = ({ madrasahId,
 
   useEffect(() => {
     fetchClasses();
-  }, [madrasahId]);
+  }, [institutionId]);
 
   useEffect(() => {
     fetchAnalytics();
-  }, [madrasahId, selectedClassId]);
+  }, [institutionId, selectedClassId]);
 
   const fetchClasses = async () => {
-    if (!isValidUUID(madrasahId)) return;
-    const { data } = await supabase.from('classes').select('*').eq('madrasah_id', madrasahId);
+    if (!isValidUUID(institutionId)) return;
+    const { data } = await supabase.from('classes').select('*').eq('institution_id', institutionId);
     if (data) setClasses(data);
   };
 
   const fetchAnalytics = async () => {
-    if (!isValidUUID(madrasahId)) return;
+    if (!isValidUUID(institutionId)) return;
     setLoading(true);
     try {
         // Fetch Exams
-        let examQuery = supabase.from('exams').select('*').eq('madrasah_id', madrasahId).order('exam_date', { ascending: true });
+        let examQuery = supabase.from('exams').select('*').eq('institution_id', institutionId).order('exam_date', { ascending: true });
         if (selectedClassId !== 'all') {
             examQuery = examQuery.eq('class_id', selectedClassId);
         }
@@ -72,7 +72,7 @@ const SmartResultAnalytics: React.FC<SmartResultAnalyticsProps> = ({ madrasahId,
         const { data: marks } = await supabase.from('exam_marks').select('*').in('exam_id', examIds);
 
         // Fetch Students
-        let studentQuery = supabase.from('students').select('id, student_name, roll, class_id').eq('madrasah_id', madrasahId);
+        let studentQuery = supabase.from('students').select('id, student_name, roll, class_id').eq('institution_id', institutionId);
         if (selectedClassId !== 'all') {
             studentQuery = studentQuery.eq('class_id', selectedClassId);
         }

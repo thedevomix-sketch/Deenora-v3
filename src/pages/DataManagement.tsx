@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { ArrowLeft, Download, Upload, Loader2, CheckCircle2, Table, AlertTriangle, FileUp, FileSpreadsheet } from 'lucide-react';
 import { supabase } from 'supabase';
-import { Madrasah, Language } from 'types';
+import { Institution, Language } from 'types';
 import * as XLSX from 'xlsx';
 
 // Declare the Android interface for TypeScript
@@ -16,7 +16,7 @@ declare global {
 
 interface DataManagementProps {
   lang: Language;
-  madrasah: Madrasah | null;
+  madrasah: Institution | null;
   onBack: () => void;
   triggerRefresh: () => void;
 }
@@ -82,7 +82,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ lang, madrasah, onBack,
       const { data: students, error: fetchError } = await supabase
         .from('students')
         .select('*, classes(class_name)')
-        .eq('madrasah_id', madrasah.id);
+        .eq('institution_id', madrasah.id);
         
       if (fetchError) throw fetchError;
       if (!students || students.length === 0) {
@@ -165,7 +165,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ lang, madrasah, onBack,
             const { data: existingClass } = await supabase
               .from('classes')
               .select('id')
-              .eq('madrasah_id', madrasah.id)
+              .eq('institution_id', madrasah.id)
               .eq('class_name', className)
               .maybeSingle();
 
@@ -174,7 +174,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ lang, madrasah, onBack,
             } else {
               const { data: newClass, error: classError } = await supabase
                 .from('classes')
-                .insert({ madrasah_id: madrasah.id, class_name: className })
+                .insert({ institution_id: madrasah.id, class_name: className })
                 .select('id')
                 .single();
               if (classError) {
@@ -188,7 +188,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ lang, madrasah, onBack,
             let studentQuery = supabase
               .from('students')
               .select('id')
-              .eq('madrasah_id', madrasah.id)
+              .eq('institution_id', madrasah.id)
               .eq('class_id', classId)
               .eq('student_name', studentName);
             
@@ -209,7 +209,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ lang, madrasah, onBack,
             const { error: studentError } = await supabase
               .from('students')
               .insert({
-                madrasah_id: madrasah.id,
+                institution_id: madrasah.id,
                 class_id: classId,
                 student_name: studentName,
                 roll: roll,

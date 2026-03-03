@@ -3,14 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CreditCard, Loader2, Send, ChevronDown, BookOpen, Users, CheckCircle2, MessageSquare, Plus, Edit3, Trash2, Smartphone, X, Check, History, Zap, AlertTriangle, Clock, Save, AlertCircle } from 'lucide-react';
 import { supabase, smsApi } from 'supabase';
-import { SMSTemplate, Language, Madrasah, Class, Student, Transaction } from 'types';
+import { SMSTemplate, Language, Institution, Class, Student, Transaction } from 'types';
 import { t } from 'translations';
 import { sortMadrasahClasses } from 'pages/Classes';
 import { getSmsLengthInfo } from 'utils/smsUtils';
 
 interface WalletSMSProps {
   lang: Language;
-  madrasah: Madrasah | null;
+  madrasah: Institution | null;
   triggerRefresh: () => void;
   dataVersion: number;
 }
@@ -71,7 +71,7 @@ const WalletSMS: React.FC<WalletSMSProps> = ({ lang, madrasah, triggerRefresh, d
 
   const fetchClasses = async () => {
     if (!madrasah) return;
-    const { data } = await supabase.from('classes').select('*').eq('madrasah_id', madrasah.id);
+    const { data } = await supabase.from('classes').select('*').eq('institution_id', madrasah.id);
     if (data) setClasses(sortMadrasahClasses(data));
   };
 
@@ -83,7 +83,7 @@ const WalletSMS: React.FC<WalletSMSProps> = ({ lang, madrasah, triggerRefresh, d
   const fetchTemplates = async () => {
     if (!madrasah) return;
     setLoading(true);
-    const { data } = await supabase.from('sms_templates').select('*').eq('madrasah_id', madrasah.id).order('created_at', { ascending: false });
+    const { data } = await supabase.from('sms_templates').select('*').eq('institution_id', madrasah.id).order('created_at', { ascending: false });
     if (data) setTemplates(data);
     setLoading(false);
   };
@@ -95,7 +95,7 @@ const WalletSMS: React.FC<WalletSMSProps> = ({ lang, madrasah, triggerRefresh, d
       if (editingId) {
         await supabase.from('sms_templates').update({ title: tempTitle, body: tempBody }).eq('id', editingId);
       } else {
-        await supabase.from('sms_templates').insert({ madrasah_id: madrasah.id, title: tempTitle, body: tempBody });
+        await supabase.from('sms_templates').insert({ institution_id: madrasah.id, title: tempTitle, body: tempBody });
       }
       setShowAddModal(false);
       setTempTitle('');
@@ -119,7 +119,7 @@ const WalletSMS: React.FC<WalletSMSProps> = ({ lang, madrasah, triggerRefresh, d
     if (!madrasah) return;
     const { data } = await supabase.from('transactions')
       .select('*')
-      .eq('madrasah_id', madrasah.id)
+      .eq('institution_id', madrasah.id)
       .order('created_at', { ascending: false })
       .limit(10);
     if (data) setUserTransactions(data);
@@ -130,7 +130,7 @@ const WalletSMS: React.FC<WalletSMSProps> = ({ lang, madrasah, triggerRefresh, d
     setRequesting(true);
     try {
       const { error } = await supabase.from('transactions').insert({
-        madrasah_id: madrasah.id,
+        institution_id: madrasah.id,
         amount: parseInt(rechargeAmount),
         transaction_id: rechargeTrx.trim().toUpperCase(),
         sender_phone: rechargePhone.trim(),

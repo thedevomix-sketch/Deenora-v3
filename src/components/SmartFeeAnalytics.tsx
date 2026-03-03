@@ -7,14 +7,14 @@ import { TrendingUp, DollarSign, BarChart3, AlertCircle, Send, Loader2, CheckCir
 import { isValidUUID } from 'utils/validation';
 
 interface SmartFeeAnalyticsProps {
-  madrasahId: string;
+  institutionId: string;
   lang: Language;
   month: string;
   refreshKey?: number;
   classes?: Class[];
 }
 
-const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang, month: initialMonth, refreshKey, classes = [] }) => {
+const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ institutionId, lang, month: initialMonth, refreshKey, classes = [] }) => {
   const [stats, setStats] = useState<any>(null);
   const [reminders, setReminders] = useState<any[]>([]);
   const [breakdown, setBreakdown] = useState<any[]>([]);
@@ -29,17 +29,17 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
 
   useEffect(() => {
     fetchAnalytics();
-  }, [madrasahId, selectedMonth, selectedYear, viewMode, selectedClassId, refreshKey]);
+  }, [institutionId, selectedMonth, selectedYear, viewMode, selectedClassId, refreshKey]);
 
   const fetchAnalytics = async () => {
-    if (!isValidUUID(madrasahId)) return;
+    if (!isValidUUID(institutionId)) return;
     setLoading(true);
     try {
       // Determine date filter for ledger
       const dateFilter = viewMode === 'monthly' ? selectedMonth : selectedYear;
 
       // 1. Fetch Fee Structures
-      let structureQuery = supabase.from('fee_structures').select('*').eq('madrasah_id', madrasahId);
+      let structureQuery = supabase.from('fee_structures').select('*').eq('institution_id', institutionId);
       if (selectedClassId !== 'all') {
         structureQuery = structureQuery.eq('class_id', selectedClassId);
       }
@@ -47,7 +47,7 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
       if (!structures) return;
 
       // 2. Fetch Students for counts and class mapping
-      let studentQuery = supabase.from('students').select('student_name, class_id').eq('madrasah_id', madrasahId);
+      let studentQuery = supabase.from('students').select('student_name, class_id').eq('institution_id', institutionId);
       if (selectedClassId !== 'all') {
         studentQuery = studentQuery.eq('class_id', selectedClassId);
       }
@@ -64,7 +64,7 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
       // 3. Fetch Ledger for transaction counts (Income) AND Expenses
       const { data: ledger } = await supabase.from('ledger')
         .select('description, amount, type, category, transaction_date')
-        .eq('madrasah_id', madrasahId)
+        .eq('institution_id', institutionId)
         .or(`transaction_date.ilike.${dateFilter}%,description.ilike.%${dateFilter}%`);
 
       // 4. Process Data
@@ -171,7 +171,7 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
 
       // Fetch reminders only for monthly view (current dues)
       if (viewMode === 'monthly') {
-        const { data: remindersData } = await supabase.rpc('get_fee_reminder_list', { p_madrasah_id: madrasahId, p_month: selectedMonth });
+        const { data: remindersData } = await supabase.rpc('get_fee_reminder_list', { p_institution_id: institutionId, p_month: selectedMonth });
         if (remindersData) {
             // Filter reminders by class if selected
             const filteredReminders = selectedClassId !== 'all' 

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, ChevronRight, BookOpen, Users, Edit3, Trash2, X, Check, Loader2, AlertCircle, AlertTriangle, Hash } from 'lucide-react';
 import { supabase, offlineApi } from 'supabase';
-import { Class, Language, Madrasah } from 'types';
+import { Class, Language, Institution } from 'types';
 import { t } from 'translations';
 
 export const sortMadrasahClasses = (classes: any[]) => {
@@ -21,7 +21,7 @@ export const sortMadrasahClasses = (classes: any[]) => {
 interface ClassesProps {
   onClassClick: (cls: Class) => void;
   lang: Language;
-  madrasah: Madrasah | null;
+  madrasah: Institution | null;
   dataVersion: number;
   triggerRefresh: () => void;
   readOnly?: boolean;
@@ -53,7 +53,7 @@ const Classes: React.FC<ClassesProps> = ({ onClassClick, lang, madrasah, dataVer
         const { data: classesData, error } = await supabase
           .from('classes')
           .select('*')
-          .eq('madrasah_id', madrasah.id);
+          .eq('institution_id', madrasah.id);
         if (error) throw error;
         if (classesData) {
           const withCounts = await Promise.all(classesData.map(async (cls) => {
@@ -93,7 +93,7 @@ const Classes: React.FC<ClassesProps> = ({ onClassClick, lang, madrasah, dataVer
       } else {
         const payload = { 
           class_name: newClassName.trim(), 
-          madrasah_id: madrasah.id,
+          institution_id: madrasah.id,
           sort_order: order
         };
         if (navigator.onLine) {
