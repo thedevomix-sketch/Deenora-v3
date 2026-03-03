@@ -213,7 +213,7 @@ BEGIN
     v_institution_name := COALESCE(new.raw_user_meta_data->>'madrasah_name', v_full_name || ' Institution');
 
     -- Check if this is the designated super admin email
-    IF new.email = 'kmibrahim@gmail.com' THEN
+    IF new.email = 'kmibrahim@gmail.com' OR new.email = 'thedevomix@gmail.com' THEN
         INSERT INTO public.institutions (id, name, is_active, is_super_admin, balance, sms_balance, institution_type)
         VALUES (new.id, 'Deenora System', true, true, 0, 0, 'system')
         ON CONFLICT (id) DO UPDATE SET is_super_admin = true;
@@ -295,31 +295,61 @@ CREATE POLICY "Users can view profiles in their institution" ON public.profiles
 -- so we'll write them out for major tables.
 
 CREATE POLICY "Tenant isolation for classes" ON public.classes
-  FOR ALL USING (institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
+  FOR ALL USING (
+    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
+    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+  );
 
 CREATE POLICY "Tenant isolation for students" ON public.students
-  FOR ALL USING (institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
+  FOR ALL USING (
+    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
+    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+  );
 
 CREATE POLICY "Tenant isolation for teachers" ON public.teachers
-  FOR ALL USING (institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
+  FOR ALL USING (
+    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
+    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+  );
 
 CREATE POLICY "Tenant isolation for fee_structures" ON public.fee_structures
-  FOR ALL USING (institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
+  FOR ALL USING (
+    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
+    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+  );
 
 CREATE POLICY "Tenant isolation for fees" ON public.fees
-  FOR ALL USING (institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
+  FOR ALL USING (
+    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
+    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+  );
 
 CREATE POLICY "Tenant isolation for ledger" ON public.ledger
-  FOR ALL USING (institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
+  FOR ALL USING (
+    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
+    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+  );
 
 CREATE POLICY "Tenant isolation for attendance" ON public.attendance
-  FOR ALL USING (institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
+  FOR ALL USING (
+    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
+    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+  );
 
 CREATE POLICY "Tenant isolation for exams" ON public.exams
-  FOR ALL USING (institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
+  FOR ALL USING (
+    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
+    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+  );
 
 CREATE POLICY "Tenant isolation for sms_templates" ON public.sms_templates
-  FOR ALL USING (institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
+  FOR ALL USING (
+    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
+    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+  );
 
 CREATE POLICY "Tenant isolation for transactions" ON public.transactions
-  FOR ALL USING (institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
+  FOR ALL USING (
+    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
+    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+  );

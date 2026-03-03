@@ -24,6 +24,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   const [adminStock, setAdminStock] = useState<AdminSMSStock | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'madrasah' | 'school' | 'kindergarten' | 'nurani'>('all');
   const [view, setView] = useState<'list' | 'approvals' | 'details' | 'dashboard'>(
     currentView === 'approvals' ? 'approvals' : currentView === 'dashboard' ? 'dashboard' : 'list'
   );
@@ -216,7 +217,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
         is_active: editActive,
         reve_api_key: editReveApiKey.trim() || null,
         reve_secret_key: editReveSecretKey.trim() || null,
-        reve_caller_id: editReveCallerId.trim() || null
+        reve_caller_id: editReveCallerId.trim() || null,
+        institution_type: selectedUser.institution_type
       }).eq('id', selectedUser.id);
       
       if (error) throw error;
@@ -320,7 +322,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     setSmsEnabledMap(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const filtered = useMemo(() => madrasahs.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase())), [madrasahs, searchQuery]);
+  const filtered = useMemo(() => madrasahs.filter(m => {
+    const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = filterType === 'all' || (m.institution_type || 'madrasah') === filterType;
+    return matchesSearch && matchesType;
+  }), [madrasahs, searchQuery, filterType]);
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in relative">
@@ -400,9 +406,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                 <h1 className="text-xl font-black text-[#1E293B] font-noto">মাদরাসা লিস্ট</h1>
               </div>
 
-              <div className="relative group px-1">
-                <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-                <input type="text" placeholder="Search Madrasah..." className="w-full h-14 pl-14 pr-14 bg-white border border-slate-100 rounded-[2rem] outline-none text-slate-800 font-bold shadow-bubble" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              <div className="flex gap-2 px-1">
+                <div className="relative group flex-1">
+                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                  <input type="text" placeholder="Search Madrasah..." className="w-full h-14 pl-14 pr-14 bg-white border border-slate-100 rounded-[2rem] outline-none text-slate-800 font-bold shadow-bubble" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                </div>
+                <select 
+                  className="h-14 px-4 bg-white border border-slate-100 rounded-[2rem] outline-none text-slate-800 font-bold shadow-bubble text-xs"
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value as any)}
+                >
+                  <option value="all">All</option>
+                  <option value="madrasah">Madrasah</option>
+                  <option value="school">School</option>
+                  <option value="kindergarten">Kindergarten</option>
+                  <option value="nurani">Nurani</option>
+                </select>
               </div>
 
               <div className="space-y-3">
@@ -418,6 +437,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                           <div className="flex items-center gap-2 mt-1">
                             <p className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${m.is_active ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
                               {m.is_active ? 'Active' : 'Blocked'}
+                            </p>
+                            <span className="text-[10px] text-slate-300">•</span>
+                            <p className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
+                              {m.institution_type || 'madrasah'}
                             </p>
                             <span className="text-[10px] text-slate-300">•</span>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{m.phone || 'No Phone'}</p>
@@ -642,6 +665,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                             <div className="space-y-1.5">
                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Override Sender ID</label>
                                <input type="text" className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm" value={editReveCallerId} onChange={(e) => setEditReveCallerId(e.target.value)} placeholder="e.g. 12345" />
+                            </div>
+                            <div className="space-y-1.5">
+                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Institution Type</label>
+                               <select 
+                                 className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
+                                 value={selectedUser.institution_type || 'madrasah'}
+                                 onChange={(e) => setSelectedUser({...selectedUser, institution_type: e.target.value as any})}
+                               >
+                                 <option value="madrasah">Madrasah</option>
+                                 <option value="school">School</option>
+                                 <option value="kindergarten">Kindergarten</option>
+                                 <option value="nurani">Nurani</option>
+                               </select>
                             </div>
                          </div>
                       </div>
