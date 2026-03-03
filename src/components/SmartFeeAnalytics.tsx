@@ -61,9 +61,9 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
 
       // 3. Fetch Ledger for transaction counts (Income) AND Expenses
       const { data: ledger } = await supabase.from('ledger')
-        .select('description, amount, type, category')
+        .select('description, amount, type, category, transaction_date')
         .eq('madrasah_id', madrasahId)
-        .ilike('transaction_date', `${dateFilter}%`);
+        .or(`transaction_date.ilike.${dateFilter}%,description.ilike.%${dateFilter}%`);
 
       // 4. Process Data
       const breakdownMap: Record<string, { expected: number, collected: number, students: number, transactions: number }> = {};
@@ -73,7 +73,7 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
 
       // Calculate Expenses
       ledger?.forEach(l => {
-        if (l.type === 'expense') {
+        if (l.type === 'expense' && l.transaction_date.startsWith(dateFilter)) {
           totalExpense += l.amount;
         }
       });
@@ -96,31 +96,63 @@ const SmartFeeAnalytics: React.FC<SmartFeeAnalyticsProps> = ({ madrasahId, lang,
       ledger?.forEach(l => {
         if (l.type !== 'income' || l.category !== 'Student Fee') return;
 
+        // Ensure it's for the selected month/year
+        if (!l.description.includes(dateFilter)) return;
+
         const parts = l.description.split(' - ');
         if (parts.length < 2) return;
 
         const feePart = parts[0];
         const studentInfo = parts.slice(1).join(' - ');
         const studentName = studentInfo.split(' (')[0];
+        
+        // Extract class name from description if possible
+        const match = studentInfo.match(/\((.*?)\s*\|/);
+        const className = match ? match[1].trim() : null;
+        
+        let classId = studentClassMap[studentName];
+        if (!classId && className && classes.length > 0) {
+            classId = classes.find(c => c.class_name === className)?.id;
+        }
+
         // If filtering by class, ensure student belongs to selected class
-        const classId = studentClassMap[studentName];
         if (selectedClassId !== 'all' && classId !== selectedClassId) return;
 
         const fees = feePart.split(', ');
+        let totalStructureAmount = 0;
+        const matchedStructures: any[] = [];
+        
         fees.forEach(f => {
-          if (breakdownMap[f]) {
-            breakdownMap[f].transactions += 1;
-            
             if (classId) {
                const structure = structures.find(s => s.fee_name === f && s.class_id === classId);
                if (structure) {
-                   // Add actual collected amount for this fee item
-                   breakdownMap[f].collected += structure.amount;
-                   totalCollected += structure.amount;
+                   totalStructureAmount += structure.amount;
+                   matchedStructures.push(structure);
                }
             }
-          }
         });
+        
+        if (matchedStructures.length > 0) {
+            matchedStructures.forEach(structure => {
+                if (breakdownMap[structure.fee_name]) {
+                    breakdownMap[structure.fee_name].transactions += 1;
+                    // Allocate actual collected amount proportionally
+                    const ratio = totalStructureAmount > 0 ? (structure.amount / totalStructureAmount) : 0;
+                    const allocatedAmount = l.amount * ratio;
+                    breakdownMap[structure.fee_name].collected += allocatedAmount;
+                }
+            });
+            totalCollected += l.amount;
+        } else {
+            // Fallback if no structures matched (e.g. fee structure was deleted)
+            fees.forEach(f => {
+                if (breakdownMap[f]) {
+                    breakdownMap[f].transactions += 1;
+                    breakdownMap[f].collected += l.amount / fees.length;
+                }
+            });
+            totalCollected += l.amount;
+        }
       });
 
       const breakdownList = Object.entries(breakdownMap).map(([name, data]) => ({ name, ...data }));

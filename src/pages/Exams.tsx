@@ -7,7 +7,8 @@ import { t } from 'translations';
 import { sortMadrasahClasses } from 'pages/Classes';
 import SmartResultAnalytics from 'components/SmartResultAnalytics';
 import FinalResults from './FinalResults';
-import { generateAdmitCardPDF, generateSeatPlanPDF, generateResultPDF, generateClassResultPDF } from '../utils/pdfGenerator';
+import { generateSeatPlanPDF, generateResultPDF, generateClassResultPDF } from '../utils/pdfGenerator';
+import { generateAdmitCardPDF } from '../utils/admitCardGenerator';
 
 interface ExamsProps {
   lang: Language;
