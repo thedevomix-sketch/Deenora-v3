@@ -118,10 +118,23 @@ CREATE TABLE IF NOT EXISTS public.fees (
   student_id UUID REFERENCES public.students(id) ON DELETE CASCADE,
   class_id UUID REFERENCES public.classes(id) ON DELETE CASCADE,
   amount_paid NUMERIC NOT NULL DEFAULT 0,
+  amount_due NUMERIC DEFAULT 0,
+  discount NUMERIC DEFAULT 0,
   month TEXT NOT NULL,
   status TEXT DEFAULT 'paid',
   paid_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Ensure columns exist if table was already created
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fees' AND column_name = 'amount_due') THEN
+        ALTER TABLE public.fees ADD COLUMN amount_due NUMERIC DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fees' AND column_name = 'discount') THEN
+        ALTER TABLE public.fees ADD COLUMN discount NUMERIC DEFAULT 0;
+    END IF;
+END $$;
 
 -- Ledger Table
 CREATE TABLE IF NOT EXISTS public.ledger (
@@ -261,6 +274,30 @@ ON CONFLICT (id) DO NOTHING;
 -- 4. ROW LEVEL SECURITY (RLS)
 -- ==========================================
 
+-- Helper functions to avoid recursion
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'super_admin'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.get_my_institution_id()
+RETURNS UUID AS $$
+DECLARE
+  v_inst_id UUID;
+BEGIN
+  SELECT institution_id INTO v_inst_id
+  FROM public.profiles
+  WHERE id = auth.uid();
+  
+  RETURN v_inst_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Enable RLS on all tables
 ALTER TABLE public.institutions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -280,20 +317,20 @@ ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 -- Policies for Institutions
 DROP POLICY IF EXISTS "Super admins can do everything on institutions" ON public.institutions;
 CREATE POLICY "Super admins can do everything on institutions" ON public.institutions
-  FOR ALL USING (auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'super_admin'));
+  FOR ALL USING (public.is_super_admin());
 
 DROP POLICY IF EXISTS "Users can view their own institution" ON public.institutions;
 CREATE POLICY "Users can view their own institution" ON public.institutions
-  FOR SELECT USING (id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
+  FOR SELECT USING (id = public.get_my_institution_id());
 
 -- Policies for Profiles
 DROP POLICY IF EXISTS "Super admins can view all profiles" ON public.profiles;
 CREATE POLICY "Super admins can view all profiles" ON public.profiles
-  FOR SELECT USING (auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'super_admin'));
+  FOR SELECT USING (public.is_super_admin());
 
 DROP POLICY IF EXISTS "Users can view profiles in their institution" ON public.profiles;
 CREATE POLICY "Users can view profiles in their institution" ON public.profiles
-  FOR SELECT USING (institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
+  FOR SELECT USING (institution_id = public.get_my_institution_id());
 
 -- Generic Policy for Tenant Isolation
 -- We can't use a generic function easily in SQL script without defining it first, 
@@ -302,71 +339,71 @@ CREATE POLICY "Users can view profiles in their institution" ON public.profiles
 DROP POLICY IF EXISTS "Tenant isolation for classes" ON public.classes;
 CREATE POLICY "Tenant isolation for classes" ON public.classes
   FOR ALL USING (
-    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
-    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+    institution_id = public.get_my_institution_id()
+    OR public.is_super_admin()
   );
 
 DROP POLICY IF EXISTS "Tenant isolation for students" ON public.students;
 CREATE POLICY "Tenant isolation for students" ON public.students
   FOR ALL USING (
-    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
-    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+    institution_id = public.get_my_institution_id()
+    OR public.is_super_admin()
   );
 
 DROP POLICY IF EXISTS "Tenant isolation for teachers" ON public.teachers;
 CREATE POLICY "Tenant isolation for teachers" ON public.teachers
   FOR ALL USING (
-    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
-    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+    institution_id = public.get_my_institution_id()
+    OR public.is_super_admin()
   );
 
 DROP POLICY IF EXISTS "Tenant isolation for fee_structures" ON public.fee_structures;
 CREATE POLICY "Tenant isolation for fee_structures" ON public.fee_structures
   FOR ALL USING (
-    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
-    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+    institution_id = public.get_my_institution_id()
+    OR public.is_super_admin()
   );
 
 DROP POLICY IF EXISTS "Tenant isolation for fees" ON public.fees;
 CREATE POLICY "Tenant isolation for fees" ON public.fees
   FOR ALL USING (
-    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
-    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+    institution_id = public.get_my_institution_id()
+    OR public.is_super_admin()
   );
 
 DROP POLICY IF EXISTS "Tenant isolation for ledger" ON public.ledger;
 CREATE POLICY "Tenant isolation for ledger" ON public.ledger
   FOR ALL USING (
-    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
-    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+    institution_id = public.get_my_institution_id()
+    OR public.is_super_admin()
   );
 
 DROP POLICY IF EXISTS "Tenant isolation for attendance" ON public.attendance;
 CREATE POLICY "Tenant isolation for attendance" ON public.attendance
   FOR ALL USING (
-    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
-    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+    institution_id = public.get_my_institution_id()
+    OR public.is_super_admin()
   );
 
 DROP POLICY IF EXISTS "Tenant isolation for exams" ON public.exams;
 CREATE POLICY "Tenant isolation for exams" ON public.exams
   FOR ALL USING (
-    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
-    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+    institution_id = public.get_my_institution_id()
+    OR public.is_super_admin()
   );
 
 DROP POLICY IF EXISTS "Tenant isolation for sms_templates" ON public.sms_templates;
 CREATE POLICY "Tenant isolation for sms_templates" ON public.sms_templates
   FOR ALL USING (
-    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
-    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+    institution_id = public.get_my_institution_id()
+    OR public.is_super_admin()
   );
 
 DROP POLICY IF EXISTS "Tenant isolation for transactions" ON public.transactions;
 CREATE POLICY "Tenant isolation for transactions" ON public.transactions
   FOR ALL USING (
-    institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
-    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+    institution_id = public.get_my_institution_id()
+    OR public.is_super_admin()
   );
 
 DROP FUNCTION IF EXISTS public.get_monthly_dues_report(uuid, uuid, text);
