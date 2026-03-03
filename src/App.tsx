@@ -82,6 +82,8 @@ const App: React.FC = () => {
                   onNavigateToAccounting={() => setView('accounting')}
                   onNavigateToAttendance={() => setView('attendance')}
                   onNavigateToExams={() => setView('exams')}
+                  onNavigateToClasses={() => setView('classes')}
+                  onNavigateToTeachers={() => setView('teachers')}
                 />;
       case 'classes':
         return <Classes onClassClick={(cls) => { setSelectedClass(cls); setView('students'); }} lang={lang} madrasah={madrasah} dataVersion={dataVersion} triggerRefresh={triggerRefresh} readOnly={role === 'teacher'} />;
@@ -144,6 +146,8 @@ const App: React.FC = () => {
                   onNavigateToAccounting={() => setView('accounting')}
                   onNavigateToAttendance={() => setView('attendance')}
                   onNavigateToExams={() => setView('exams')}
+                  onNavigateToClasses={() => setView('classes')}
+                  onNavigateToTeachers={() => setView('teachers')}
                 />;
     }
   };

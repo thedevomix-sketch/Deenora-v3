@@ -6,6 +6,7 @@ import { GraduationCap, Plus, ChevronRight, BookOpen, Trophy, Save, X, Edit3, Tr
 import { t } from 'translations';
 import { sortMadrasahClasses } from 'pages/Classes';
 import SmartResultAnalytics from 'components/SmartResultAnalytics';
+import FinalResults from './FinalResults';
 import { generateAdmitCardPDF, generateSeatPlanPDF, generateResultPDF, generateClassResultPDF } from '../utils/pdfGenerator';
 
 interface ExamsProps {
@@ -17,7 +18,8 @@ interface ExamsProps {
 }
 
 const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateToFinalResults }) => {
-  const [view, setView] = useState<'list' | 'subjects' | 'marks' | 'report' | 'insights' | 'admit-card' | 'seat-plan'>('list');
+  const [activeTab, setActiveTab] = useState<'exams' | 'final-results' | 'seat-plan' | 'analytics'>('exams');
+  const [view, setView] = useState<'list' | 'subjects' | 'marks' | 'report'>('list');
   const [exams, setExams] = useState<Exam[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
@@ -349,43 +351,56 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+      {activeTab !== 'final-results' && (
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-3">
           <button onClick={view === 'list' ? onBack : () => setView('list')} className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-[#2563EB] border border-blue-100">
             <ArrowLeft size={20}/>
           </button>
           <h1 className="text-xl font-black text-[#1E293B] font-noto">
-            {view === 'list' ? t('exams', lang) : view === 'insights' ? t('prediction_system', lang) : view === 'seat-plan' ? 'Seat Plan' : selectedExam?.exam_name}
+            {activeTab === 'exams' && view === 'list' ? t('exams', lang) : 
+             activeTab === 'exams' && selectedExam ? selectedExam.exam_name :
+             activeTab === 'seat-plan' ? 'Seat Plan' :
+             activeTab === 'analytics' ? t('prediction_system', lang) : t('exams', lang)}
           </h1>
-          {view === 'report' && (
+          {activeTab === 'exams' && view === 'report' && (
               <button onClick={handleDownloadClassResult} className="w-10 h-10 bg-blue-50 text-[#2563EB] rounded-xl flex items-center justify-center border border-blue-100 hover:bg-blue-100 transition-colors">
                   <Download size={20} />
               </button>
           )}
         </div>
-        {(view === 'list' || view === 'insights' || view === 'seat-plan') && role === 'madrasah_admin' && (
+        {activeTab === 'exams' && view === 'list' && role === 'madrasah_admin' && (
             <div className="flex gap-2">
-                {onNavigateToFinalResults && (
-                  <button onClick={onNavigateToFinalResults} className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center border border-purple-100 shadow-sm active:scale-95 transition-all">
-                    <Trophy size={20} />
-                  </button>
-                )}
-                <button onClick={() => setView(view === 'seat-plan' ? 'list' : 'seat-plan')} className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${view === 'seat-plan' ? 'bg-[#2563EB] text-white border-[#2563EB]' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
-                    <Grid3X3 size={20}/>
-                </button>
-                <button onClick={() => setView(view === 'insights' ? 'list' : 'insights')} className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${view === 'insights' ? 'bg-[#2563EB] text-white border-[#2563EB]' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
-                    <TrendingUp size={20}/>
+                <button onClick={() => setActiveTab('final-results')} className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center border border-purple-100 shadow-sm active:scale-95 transition-all" title="Final Results">
+                  <Trophy size={20} />
                 </button>
                 <button onClick={() => setShowAddExam(true)} className="w-10 h-10 bg-[#2563EB] text-white rounded-xl shadow-premium flex items-center justify-center active:scale-95 transition-all"><Plus size={20}/></button>
             </div>
         )}
       </div>
+      )}
 
-      {view === 'insights' && madrasah && (
+      <div className="flex p-1.5 bg-slate-50 rounded-[1.5rem] border border-slate-100 overflow-x-auto no-scrollbar">
+        <button onClick={() => setActiveTab('exams')} className={`flex-1 min-w-[85px] py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${activeTab === 'exams' ? 'bg-[#2563EB] text-white shadow-premium' : 'text-slate-400'}`}>
+            {t('exams', lang)}
+        </button>
+        <button onClick={() => setActiveTab('seat-plan')} className={`flex-1 min-w-[85px] py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${activeTab === 'seat-plan' ? 'bg-[#2563EB] text-white shadow-premium' : 'text-slate-400'}`}>
+            Seat Plan
+        </button>
+        <button onClick={() => setActiveTab('analytics')} className={`flex-1 min-w-[85px] py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${activeTab === 'analytics' ? 'bg-[#2563EB] text-white shadow-premium' : 'text-slate-400'}`}>
+            Analytics
+        </button>
+      </div>
+
+      {activeTab === 'analytics' && madrasah && (
           <SmartResultAnalytics madrasahId={madrasah.id} lang={lang} />
       )}
 
-      {view === 'seat-plan' && (
+      {activeTab === 'final-results' && (
+          <FinalResults lang={lang} madrasah={madrasah} role={role} onBack={() => setActiveTab('exams')} />
+      )}
+
+      {activeTab === 'seat-plan' && (
         <div className="space-y-6">
             {/* Configuration Section */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-bubble space-y-6">
@@ -519,7 +534,7 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
         </div>
       )}
 
-      {view === 'list' && (
+      {activeTab === 'exams' && view === 'list' && (
         <div className="space-y-4">
           {loading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#2563EB]" /></div> : exams.map(exam => (
             <div key={exam.id} className="bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-bubble space-y-4">
@@ -549,7 +564,7 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
         </div>
       )}
 
-      {view === 'subjects' && (
+      {activeTab === 'exams' && view === 'subjects' && (
         <div className="space-y-4">
            <button onClick={() => setShowAddSubject(true)} className="w-full py-5 bg-white rounded-[2.2rem] text-[#2563EB] font-black flex items-center justify-center gap-3 shadow-bubble border border-slate-100 active:scale-95 transition-all">
               <Plus size={24} strokeWidth={3} /> বিষয় যোগ করুন
@@ -571,7 +586,7 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
         </div>
       )}
 
-      {view === 'marks' && (
+      {activeTab === 'exams' && view === 'marks' && (
         <div className="space-y-4">
             <div className="bg-white p-5 rounded-[2.5rem] shadow-bubble border border-slate-100 overflow-x-auto no-scrollbar">
                 <table className="w-full text-left">
@@ -641,7 +656,7 @@ const Exams: React.FC<ExamsProps> = ({ lang, madrasah, onBack, role, onNavigateT
         </div>
       )}
 
-      {view === 'report' && (
+      {activeTab === 'exams' && view === 'report' && (
           <div className="space-y-4">
               {loading ? (
                 <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#2563EB]" size={40} /></div>

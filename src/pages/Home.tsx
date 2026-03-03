@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Clock, User as UserIcon, RefreshCw, PhoneCall, X, MessageCircle, Phone, AlertCircle, Trash2, AlertTriangle, Loader2, Users, BookOpen, GraduationCap, Wallet, TrendingUp, DollarSign, CheckCircle2, Banknote, ClipboardList, ChevronRight, Trophy } from 'lucide-react';
+import { Search, Clock, User as UserIcon, RefreshCw, PhoneCall, X, MessageCircle, Phone, AlertCircle, Trash2, AlertTriangle, Loader2, Users, BookOpen, GraduationCap, Wallet, TrendingUp, DollarSign, CheckCircle2, Banknote, ClipboardList, ChevronRight, Trophy, Zap } from 'lucide-react';
 import { supabase, offlineApi } from 'supabase';
 import { Student, Language } from 'types';
 import { t } from 'translations';
@@ -19,14 +19,17 @@ interface HomeProps {
   onNavigateToAccounting?: () => void;
   onNavigateToAttendance?: () => void;
   onNavigateToExams?: () => void;
+  onNavigateToClasses?: () => void;
+  onNavigateToTeachers?: () => void;
 }
 
-const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerRefresh, madrasahId, onNavigateToWallet, onNavigateToAccounting, onNavigateToAttendance, onNavigateToExams }) => {
+const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerRefresh, madrasahId, onNavigateToWallet, onNavigateToAccounting, onNavigateToAttendance, onNavigateToExams, onNavigateToClasses, onNavigateToTeachers }) => {
   const [fetchError, setFetchError] = useState<string | null>(null);
   
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalClasses: 0,
+    totalTeachers: 0,
     smsBalance: 0,
     attendanceToday: 0
   });
@@ -40,9 +43,10 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
     setLoadingStats(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      const [stdRes, clsRes, mRes, attRes] = await Promise.all([
+      const [stdRes, clsRes, teaRes, mRes, attRes] = await Promise.all([
         supabase.from('students').select('*', { count: 'exact', head: true }).eq('madrasah_id', madrasahId),
         supabase.from('classes').select('*', { count: 'exact', head: true }).eq('madrasah_id', madrasahId),
+        supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('madrasah_id', madrasahId),
         supabase.from('madrasahs').select('sms_balance').eq('id', madrasahId).maybeSingle(),
         supabase.from('attendance').select('*', { count: 'exact', head: true }).eq('madrasah_id', madrasahId).eq('date', today).eq('status', 'present')
       ]);
@@ -50,6 +54,7 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
       setStats({
         totalStudents: stdRes.count || 0,
         totalClasses: clsRes.count || 0,
+        totalTeachers: teaRes.count || 0,
         smsBalance: mRes.data?.sms_balance || 0,
         attendanceToday: attRes.count || 0
       });
@@ -67,16 +72,31 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
       <div className="grid grid-cols-2 gap-3 px-1">
-        <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300">
-           <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><Users size={20} /></div>
+        <button onClick={onNavigateToClasses} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 active:scale-95 transition-all">
+           <div className="w-10 h-10 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><Users size={20} /></div>
            <h4 className="text-xl font-black text-[#1E3A8A]">{loadingStats ? '...' : stats.totalStudents}</h4>
            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('students', lang)}</p>
-        </div>
-        <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-75">
+        </button>
+        <button onClick={onNavigateToClasses} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-75 active:scale-95 transition-all">
+           <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><BookOpen size={20} /></div>
+           <h4 className="text-xl font-black text-[#1E3A8A]">{loadingStats ? '...' : stats.totalClasses}</h4>
+           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('classes', lang)}</p>
+        </button>
+        <button onClick={onNavigateToTeachers} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-100 active:scale-95 transition-all">
+           <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><GraduationCap size={20} /></div>
+           <h4 className="text-xl font-black text-[#1E3A8A]">{loadingStats ? '...' : stats.totalTeachers}</h4>
+           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('teachers', lang)}</p>
+        </button>
+        <button onClick={onNavigateToWallet} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-150 active:scale-95 transition-all">
+           <div className="w-10 h-10 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><Zap size={20} /></div>
+           <h4 className="text-xl font-black text-[#1E3A8A]">{loadingStats ? '...' : stats.smsBalance}</h4>
+           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('wallet', lang)}</p>
+        </button>
+        <button onClick={onNavigateToAttendance} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-200 active:scale-95 transition-all col-span-2">
            <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><CheckCircle2 size={20} /></div>
            <h4 className="text-xl font-black text-[#1E3A8A]">{loadingStats ? '...' : stats.attendanceToday}</h4>
            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">আজকের হাজিরা</p>
-        </div>
+        </button>
       </div>
 
       {madrasahId && (
