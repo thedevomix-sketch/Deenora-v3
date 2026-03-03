@@ -376,40 +376,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     
     setIsCreatingInst(true);
     try {
-      // 1. Create a temporary Supabase client to create the user without logging out the admin
-      const tempClient = createClient(
-        'https://risgwrppzvufbelusxlo.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpc2d3cnBwenZ1ZmJlbHVzeGxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzNzY1ODEsImV4cCI6MjA4Nzk1MjU4MX0.ntPON5RswqkFYjaHLLzVJ3ZJkviJOIB5Pd7vA6uCfmk',
-        {
-          auth: {
-            persistSession: false, // Do not persist session to avoid overwriting admin session
-            autoRefreshToken: false,
-            detectSessionInUrl: false
-          }
-        }
-      );
-
-      // 2. Sign up the new user
-      const { data: authData, error: authError } = await tempClient.auth.signUp({
-        email: newInstEmail.trim(),
-        password: newInstPassword.trim(),
-        options: {
-          data: {
-            name: newInstName.trim(),
-            madrasah_name: newInstName.trim()
-          }
+      // Use RPC to create user directly (Bypasses API rate limits)
+      const { data: newUserId, error: rpcError } = await supabase.rpc('create_user_by_admin', {
+        p_email: newInstEmail.trim(),
+        p_password: newInstPassword.trim(),
+        p_user_data: {
+          name: newInstName.trim(),
+          madrasah_name: newInstName.trim()
         }
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("User creation failed");
+      if (rpcError) throw rpcError;
+      if (!newUserId) throw new Error("User creation failed via RPC");
 
-      const newUserId = authData.user.id;
+      // Wait a moment for the trigger to create the initial record
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // 3. Wait a moment for the trigger to create the initial record
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // 4. Update the institution record with specific details using the admin client
+      // Update the institution record with specific details
       const { error: updateError } = await supabase.from('institutions').update({
         phone: newInstPhone.trim(),
         institution_type: newInstType,
