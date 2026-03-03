@@ -353,3 +353,30 @@ CREATE POLICY "Tenant isolation for transactions" ON public.transactions
     institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
     OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
   );
+
+CREATE OR REPLACE FUNCTION public.get_monthly_dues_report(p_class_id UUID, p_institution_id UUID, p_month TEXT)
+RETURNS TABLE (
+  student_id UUID,
+  student_name TEXT,
+  roll INTEGER,
+  guardian_phone TEXT,
+  total_due NUMERIC,
+  paid_amount NUMERIC,
+  status TEXT
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    s.id as student_id,
+    s.student_name,
+    s.roll,
+    s.guardian_phone,
+    COALESCE(f.amount_due, 0) as total_due,
+    COALESCE(f.amount_paid, 0) as paid_amount,
+    COALESCE(f.status, 'unpaid') as status
+  FROM public.students s
+  LEFT JOIN public.fees f ON s.id = f.student_id AND f.month = p_month
+  WHERE s.class_id = p_class_id AND s.institution_id = p_institution_id
+  ORDER BY s.roll ASC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
