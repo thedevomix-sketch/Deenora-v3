@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Home, User, BookOpen, Wallet, ShieldCheck, BarChart3, CreditCard, RefreshCw, Smartphone, Bell, X, Info, AlertTriangle, CheckCircle2, Clock, Calculator, ClipboardList, GraduationCap, Banknote, MessageSquare } from 'lucide-react';
+import { Home, User, BookOpen, Wallet, ShieldCheck, BarChart3, CreditCard, RefreshCw, Smartphone, Bell, X, Info, AlertTriangle, CheckCircle2, Clock, Calculator, ClipboardList, GraduationCap, Banknote, MessageSquare, Users } from 'lucide-react';
 import { View, Language, Institution, Transaction, Profile } from 'types';
 import { t } from 'translations';
 import { supabase } from 'supabase';
@@ -52,6 +52,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, lang, m
   const isTabActive = (tab: string) => {
     if (tab === 'home' && currentView === 'home') return true;
     if (tab === 'account' && currentView === 'account') return true;
+    if (tab === 'list' && currentView === 'admin-panel') return true;
     if (tab === 'dashboard' && currentView === 'admin-dashboard') return true;
     if (tab === 'approvals' && currentView === 'admin-approvals') return true;
     if (tab === 'accounting' && currentView === 'accounting') return true;
@@ -105,6 +106,10 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, lang, m
           
           {isSuperAdmin ? (
             <>
+              <button onClick={() => setView('admin-panel')} className={`relative flex flex-col items-center gap-1 transition-all flex-1 ${isTabActive('list') ? 'text-[#2563EB]' : 'text-[#94A3B8]'}`}>
+                <Users size={20} />
+                <span className="text-[9px] font-black font-noto opacity-80">{lang === 'bn' ? 'প্রতিষ্ঠান' : 'Institutions'}</span>
+              </button>
               <button onClick={() => setView('admin-approvals')} className={`relative flex flex-col items-center gap-1 transition-all flex-1 ${isTabActive('approvals') ? 'text-[#2563EB]' : 'text-[#94A3B8]'}`}>
                 <CreditCard size={20} />
                 <span className="text-[9px] font-black font-noto opacity-80">{t('approvals', lang)}</span>

@@ -35,7 +35,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (profile?.role === 'super_admin' && view === 'home') {
-      setView('admin-dashboard');
+      setView('admin-panel');
     }
   }, [profile?.role, view]);
 
