@@ -77,6 +77,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
 
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const [isRefreshingStats, setIsRefreshingStats] = useState(false);
+  
+  // Create Institution State
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newInstName, setNewInstName] = useState('');
+  const [newInstPhone, setNewInstPhone] = useState('');
+  const [newInstType, setNewInstType] = useState<'madrasah' | 'school' | 'kindergarten' | 'nurani'>('madrasah');
+  const [newInstLoginCode, setNewInstLoginCode] = useState('');
+  const [isCreatingInst, setIsCreatingInst] = useState(false);
 
   const fetchGlobalCounts = async () => {
     const [studentsRes, classesRes, teachersRes, smsAllocRes, currentBalRes] = await Promise.all([
@@ -357,6 +365,43 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     setSmsEnabledMap(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const handleCreateInstitution = async () => {
+    if (!newInstName.trim() || !newInstPhone.trim()) {
+      setStatusModal({ show: true, type: 'error', title: 'ত্রুটি', message: 'নাম এবং ফোন নম্বর আবশ্যক' });
+      return;
+    }
+    
+    setIsCreatingInst(true);
+    try {
+      const newId = crypto.randomUUID();
+      const { error } = await supabase.from('institutions').insert({
+        id: newId,
+        name: newInstName.trim(),
+        phone: newInstPhone.trim(),
+        institution_type: newInstType,
+        login_code: newInstLoginCode.trim() || null,
+        is_active: true,
+        is_super_admin: false,
+        balance: 0,
+        sms_balance: 0,
+        status: 'active'
+      });
+      
+      if (error) throw error;
+      
+      setStatusModal({ show: true, type: 'success', title: 'সফল', message: 'নতুন প্রতিষ্ঠান তৈরি করা হয়েছে।' });
+      setShowCreateModal(false);
+      setNewInstName('');
+      setNewInstPhone('');
+      setNewInstLoginCode('');
+      initData(true);
+    } catch (err: any) {
+      setStatusModal({ show: true, type: 'error', title: 'ব্যর্থ', message: err.message });
+    } finally {
+      setIsCreatingInst(false);
+    }
+  };
+
   const filtered = useMemo(() => madrasahs.filter(m => {
     const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = filterType === 'all' || (m.institution_type || 'madrasah') === filterType;
@@ -439,6 +484,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
             <div className="space-y-6">
               <div className="flex items-center justify-between px-2">
                 <h1 className="text-xl font-black text-[#1E293B] font-noto">মাদরাসা লিস্ট</h1>
+                <button onClick={() => setShowCreateModal(true)} className="p-2 bg-blue-50 rounded-xl text-[#2563EB] active:scale-95 transition-all border border-blue-100 shadow-sm flex items-center gap-2 px-4">
+                   <Users size={18} /> <span className="text-xs font-black">Create New</span>
+                </button>
               </div>
 
               <div className="flex gap-2 px-1">
@@ -809,6 +857,78 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
              </div>
           )}
         </>
+      )}
+
+      {/* Create Institution Modal - PORTALED */}
+      {showCreateModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-black text-[#1E3A8A] font-noto">নতুন প্রতিষ্ঠান</h3>
+              <button onClick={() => setShowCreateModal(false)} className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">প্রতিষ্ঠানের নাম</label>
+                <input 
+                  type="text" 
+                  className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20" 
+                  value={newInstName} 
+                  onChange={(e) => setNewInstName(e.target.value)} 
+                  placeholder="Example Madrasah"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">মোবাইল নম্বর</label>
+                <input 
+                  type="tel" 
+                  className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20" 
+                  value={newInstPhone} 
+                  onChange={(e) => setNewInstPhone(e.target.value)} 
+                  placeholder="017..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">ধরণ</label>
+                <select 
+                  className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20"
+                  value={newInstType}
+                  onChange={(e) => setNewInstType(e.target.value as any)}
+                >
+                  <option value="madrasah">Madrasah</option>
+                  <option value="school">School</option>
+                  <option value="kindergarten">Kindergarten</option>
+                  <option value="nurani">Nurani</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">লগইন পিন (Optional)</label>
+                <input 
+                  type="text" 
+                  className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20" 
+                  value={newInstLoginCode} 
+                  onChange={(e) => setNewInstLoginCode(e.target.value)} 
+                  placeholder="1234"
+                />
+              </div>
+
+              <button 
+                onClick={handleCreateInstitution} 
+                disabled={isCreatingInst}
+                className="w-full h-14 bg-[#2563EB] text-white font-black rounded-[1.5rem] mt-4 shadow-premium active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {isCreatingInst ? <Loader2 className="animate-spin" /> : 'তৈরি করুন'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Reject Confirmation Modal - PORTALED */}
