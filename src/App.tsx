@@ -34,6 +34,12 @@ const App: React.FC = () => {
   const triggerRefresh = () => setDataVersion(prev => prev + 1);
 
   useEffect(() => {
+    if (profile?.role === 'super_admin' && view === 'home') {
+      setView('admin-dashboard');
+    }
+  }, [profile?.role, view]);
+
+  useEffect(() => {
     const handleStatusChange = () => {
       if (navigator.onLine) OfflineService.processQueue();
     };

@@ -12,7 +12,7 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string, email?: string) => {
     if (!isValidUUID(userId)) {
       setLoading(false);
       return;
@@ -28,21 +28,27 @@ export const useAuth = () => {
       if (profileError) throw profileError;
 
       if (profileData) {
-        setProfile(profileData);
+        // Force super_admin role for the designated email
+        const isSuperAdminEmail = email === 'kmibrahim@gmail.com';
+        const finalProfile = isSuperAdminEmail 
+          ? { ...profileData, role: 'super_admin' as const } 
+          : profileData;
+          
+        setProfile(finalProfile);
         
         // Then get the madrasah if madrasah_id exists and is valid
-        if (isValidUUID(profileData.madrasah_id)) {
+        if (isValidUUID(finalProfile.madrasah_id)) {
           const { data: madrasahData, error: mError } = await supabase
             .from('madrasahs')
             .select('*')
-            .eq('id', profileData.madrasah_id)
+            .eq('id', finalProfile.madrasah_id)
             .maybeSingle();
 
           if (mError) throw mError;
           
           setMadrasah(madrasahData);
           if (madrasahData) OfflineService.setCache('profile', madrasahData);
-        } else if (profileData.role === 'super_admin') {
+        } else if (finalProfile.role === 'super_admin') {
           // Super admins might not have a madrasah_id
           setMadrasah(null);
         }
@@ -70,7 +76,7 @@ export const useAuth = () => {
       
       if (currentSession) {
         setSession(currentSession);
-        await fetchUserProfile(currentSession.user.id);
+        await fetchUserProfile(currentSession.user.id, currentSession.user.email);
       } else {
         const teacherSession = localStorage.getItem('teacher_session');
         if (teacherSession) {
@@ -105,7 +111,7 @@ export const useAuth = () => {
         localStorage.removeItem('teacher_session');
       } else if (session) {
         setSession(session);
-        fetchUserProfile(session.user.id);
+        fetchUserProfile(session.user.id, session.user.email);
       }
     });
 
