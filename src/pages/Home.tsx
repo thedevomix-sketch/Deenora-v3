@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, Clock, User as UserIcon, RefreshCw, PhoneCall, X, MessageCircle, Phone, AlertCircle, Trash2, AlertTriangle, Loader2, Users, BookOpen, GraduationCap, Wallet, TrendingUp, DollarSign, CheckCircle2, Banknote, ClipboardList, ChevronRight, Trophy, Zap } from 'lucide-react';
 import { supabase, offlineApi } from 'supabase';
-import { Student, Language } from 'types';
+import { Student, Language, Institution } from 'types';
 import { t } from 'translations';
 import RiskAnalysis from 'components/RiskAnalysis';
 import SmartFeeAnalytics from 'components/SmartFeeAnalytics';
@@ -16,6 +16,7 @@ interface HomeProps {
   dataVersion: number;
   triggerRefresh: () => void;
   institutionId?: string;
+  madrasah: Institution | null;
   onNavigateToWallet?: () => void;
   onNavigateToAccounting?: () => void;
   onNavigateToAttendance?: () => void;
@@ -24,7 +25,7 @@ interface HomeProps {
   onNavigateToTeachers?: () => void;
 }
 
-const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerRefresh, institutionId, onNavigateToWallet, onNavigateToAccounting, onNavigateToAttendance, onNavigateToExams, onNavigateToClasses, onNavigateToTeachers }) => {
+const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerRefresh, institutionId, madrasah, onNavigateToWallet, onNavigateToAccounting, onNavigateToAttendance, onNavigateToExams, onNavigateToClasses, onNavigateToTeachers }) => {
   const [fetchError, setFetchError] = useState<string | null>(null);
   
   const [stats, setStats] = useState({
@@ -39,18 +40,35 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
+  // Dynamic module configuration
+  const modules = madrasah?.config_json?.modules || {
+    attendance: true,
+    fees: true,
+    results: true,
+    admit_card: true,
+    seat_plan: true,
+    accounting: true
+  };
+
   const fetchDashboardStats = async () => {
     if (!isValidUUID(institutionId)) return;
     setLoadingStats(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      const [stdRes, clsRes, teaRes, mRes, attRes] = await Promise.all([
+      const promises: any[] = [
         supabase.from('students').select('*', { count: 'exact', head: true }).eq('institution_id', institutionId),
         supabase.from('classes').select('*', { count: 'exact', head: true }).eq('institution_id', institutionId),
         supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('institution_id', institutionId),
-        supabase.from('institutions').select('sms_balance').eq('id', institutionId).maybeSingle(),
-        supabase.from('attendance').select('*', { count: 'exact', head: true }).eq('institution_id', institutionId).eq('date', today).eq('status', 'present')
-      ]);
+        supabase.from('institutions').select('sms_balance').eq('id', institutionId).maybeSingle()
+      ];
+
+      if (modules.attendance) {
+        promises.push(supabase.from('attendance').select('*', { count: 'exact', head: true }).eq('institution_id', institutionId).eq('date', today).eq('status', 'present'));
+      } else {
+        promises.push(Promise.resolve({ count: 0 }));
+      }
+
+      const [stdRes, clsRes, teaRes, mRes, attRes] = await Promise.all(promises);
 
       setStats({
         totalStudents: stdRes.count || 0,
@@ -68,7 +86,7 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
 
   useEffect(() => { 
     fetchDashboardStats();
-  }, [dataVersion, institutionId]);
+  }, [dataVersion, institutionId, modules.attendance]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
@@ -93,11 +111,13 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
            <h4 className="text-xl font-black text-[#1E3A8A]">{loadingStats ? '...' : stats.smsBalance}</h4>
            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('wallet', lang)}</p>
         </button>
-        <button onClick={onNavigateToAttendance} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-200 active:scale-95 transition-all col-span-2">
-           <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><CheckCircle2 size={20} /></div>
-           <h4 className="text-xl font-black text-[#1E3A8A]">{loadingStats ? '...' : stats.attendanceToday}</h4>
-           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">আজকের হাজিরা</p>
-        </button>
+        {modules.attendance && (
+          <button onClick={onNavigateToAttendance} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-200 active:scale-95 transition-all col-span-2">
+             <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><CheckCircle2 size={20} /></div>
+             <h4 className="text-xl font-black text-[#1E3A8A]">{loadingStats ? '...' : stats.attendanceToday}</h4>
+             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">আজকের হাজিরা</p>
+          </button>
+        )}
       </div>
 
       {institutionId && (
@@ -108,26 +128,30 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
             onStudentClick={onStudentClick} 
           />
           
-          <div className="px-1 space-y-3">
-             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-3 opacity-80">
-               {t('smart_fee_mgmt', lang)}
-             </h2>
-             <SmartFeeAnalytics 
-               institutionId={institutionId} 
-               lang={lang} 
-               month={new Date().toISOString().slice(0, 7)} 
-             />
-          </div>
+          {modules.fees && (
+            <div className="px-1 space-y-3">
+               <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-3 opacity-80">
+                 {t('smart_fee_mgmt', lang)}
+               </h2>
+               <SmartFeeAnalytics 
+                 institutionId={institutionId} 
+                 lang={lang} 
+                 month={new Date().toISOString().slice(0, 7)} 
+               />
+            </div>
+          )}
 
-          <div className="px-1 space-y-3">
-             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-3 opacity-80">
-               Result Insights
-             </h2>
-             <SmartResultAnalytics 
-               institutionId={institutionId} 
-               lang={lang} 
-             />
-          </div>
+          {modules.results && (
+            <div className="px-1 space-y-3">
+               <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-3 opacity-80">
+                 Result Insights
+               </h2>
+               <SmartResultAnalytics 
+                 institutionId={institutionId} 
+                 lang={lang} 
+               />
+            </div>
+          )}
         </div>
       )}
     </div>

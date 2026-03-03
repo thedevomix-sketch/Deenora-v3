@@ -61,6 +61,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   const [editReveApiKey, setEditReveApiKey] = useState('');
   const [editReveSecretKey, setEditReveSecretKey] = useState('');
   const [editReveCallerId, setEditReveCallerId] = useState('');
+  const [editModules, setEditModules] = useState({
+    attendance: true,
+    fees: true,
+    results: true,
+    admit_card: true,
+    seat_plan: true,
+    accounting: true
+  });
 
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const [isRefreshingStats, setIsRefreshingStats] = useState(false);
@@ -184,6 +192,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     setEditReveApiKey(user.reve_api_key || '');
     setEditReveSecretKey(user.reve_secret_key || '');
     setEditReveCallerId(user.reve_caller_id || '');
+    setEditModules(user.config_json?.modules || {
+      attendance: true,
+      fees: true,
+      results: true,
+      admit_card: true,
+      seat_plan: true,
+      accounting: true
+    });
     
     setView('details');
     
@@ -218,7 +234,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
         reve_api_key: editReveApiKey.trim() || null,
         reve_secret_key: editReveSecretKey.trim() || null,
         reve_caller_id: editReveCallerId.trim() || null,
-        institution_type: selectedUser.institution_type
+        institution_type: selectedUser.institution_type,
+        config_json: {
+          ...selectedUser.config_json,
+          modules: editModules
+        }
       }).eq('id', selectedUser.id);
       
       if (error) throw error;
@@ -678,6 +698,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                                  <option value="kindergarten">Kindergarten</option>
                                  <option value="nurani">Nurani</option>
                                </select>
+                            </div>
+                            
+                            <div className="space-y-3 pt-4 border-t border-slate-100">
+                               <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Enabled Modules</h5>
+                               <div className="grid grid-cols-2 gap-3">
+                                  {Object.entries(editModules).map(([key, value]) => (
+                                    <button 
+                                      key={key}
+                                      onClick={() => setEditModules({...editModules, [key]: !value})}
+                                      className={`p-3 rounded-xl border flex items-center justify-between transition-all ${value ? 'bg-blue-50 border-blue-100 text-[#1E3A8A]' : 'bg-slate-50 border-slate-100 text-slate-400'}`}
+                                    >
+                                      <span className="text-[10px] font-black uppercase tracking-wider">{key.replace('_', ' ')}</span>
+                                      {value ? <CheckCircle2 size={14} className="text-blue-500" /> : <XCircle size={14} />}
+                                    </button>
+                                  ))}
+                               </div>
                             </div>
                          </div>
                       </div>

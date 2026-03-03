@@ -156,7 +156,12 @@ export const translations = {
     gpa: 'জিপিএ',
     result_card: 'ফলাফল পত্র',
     publish_result: 'ফলাফল প্রকাশ',
-    enter_marks: 'নম্বর এন্ট্রি'
+    enter_marks: 'নম্বর এন্ট্রি',
+    menu_attendance: 'হাজিরা',
+    menu_exams: 'পরীক্ষা',
+    menu_accounting: 'হিসাব',
+    menu_students: 'ছাত্র/ছাত্রী',
+    menu_sms: 'এসএমএস'
   },
   en: {
     home: 'Dashboard',
@@ -313,6 +318,11 @@ export const translations = {
     send_reminder: 'Send Reminder',
     collection_rate_label: 'Collection Rate',
     predicted_total: 'Predicted Total Collection',
+    menu_attendance: 'Attendance',
+    menu_exams: 'Exams',
+    menu_accounting: 'Accounting',
+    menu_students: 'Students',
+    menu_sms: 'SMS'
   }
 };
 

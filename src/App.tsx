@@ -84,6 +84,7 @@ const App: React.FC = () => {
                   dataVersion={dataVersion} 
                   triggerRefresh={triggerRefresh} 
                   institutionId={madrasah?.id} 
+                  madrasah={madrasah}
                   onNavigateToWallet={() => setView('wallet-sms')}
                   onNavigateToAccounting={() => setView('accounting')}
                   onNavigateToAttendance={() => setView('attendance')}
@@ -148,6 +149,7 @@ const App: React.FC = () => {
                   dataVersion={dataVersion} 
                   triggerRefresh={triggerRefresh} 
                   institutionId={madrasah?.id} 
+                  madrasah={madrasah}
                   onNavigateToWallet={() => setView('wallet-sms')}
                   onNavigateToAccounting={() => setView('accounting')}
                   onNavigateToAttendance={() => setView('attendance')}

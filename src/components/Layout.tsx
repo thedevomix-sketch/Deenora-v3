@@ -119,28 +119,28 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, lang, m
               {modules.attendance && (
                 <button onClick={() => setView('attendance')} className={`relative flex flex-col items-center gap-1 transition-all flex-1 ${isTabActive('attendance') ? 'text-[#2563EB]' : 'text-[#94A3B8]'}`}>
                   <ClipboardList size={20} />
-                  <span className="text-[9px] font-black font-noto opacity-80">হাজিরা</span>
+                  <span className="text-[9px] font-black font-noto opacity-80">{t('menu_attendance', lang)}</span>
                 </button>
               )}
               {modules.results && (
                 <button onClick={() => setView('exams')} className={`relative flex flex-col items-center gap-1 transition-all flex-1 ${isTabActive('exams') ? 'text-[#2563EB]' : 'text-[#94A3B8]'}`}>
                   <GraduationCap size={20} />
-                  <span className="text-[9px] font-black font-noto opacity-80">পরীক্ষা</span>
+                  <span className="text-[9px] font-black font-noto opacity-80">{t('menu_exams', lang)}</span>
                 </button>
               )}
               {modules.accounting && (role === 'madrasah_admin' || role === 'accountant') && (
                 <button onClick={() => setView('accounting')} className={`relative flex flex-col items-center gap-1 transition-all flex-1 ${isTabActive('accounting') ? 'text-[#2563EB]' : 'text-[#94A3B8]'}`}>
                   <Banknote size={20} />
-                  <span className="text-[9px] font-black font-noto opacity-80">হিসাব</span>
+                  <span className="text-[9px] font-black font-noto opacity-80">{t('menu_accounting', lang)}</span>
                 </button>
               )}
               <button onClick={() => setView('classes')} className={`relative flex flex-col items-center gap-1 transition-all flex-1 ${isTabActive('classes') ? 'text-[#2563EB]' : 'text-[#94A3B8]'}`}>
                 <BookOpen size={20} />
-                <span className="text-[9px] font-black font-noto opacity-80">ছাত্র</span>
+                <span className="text-[9px] font-black font-noto opacity-80">{t('menu_students', lang)}</span>
               </button>
               <button onClick={() => setView('wallet-sms')} className={`relative flex flex-col items-center gap-1 transition-all flex-1 ${isTabActive('wallet') ? 'text-[#2563EB]' : 'text-[#94A3B8]'}`}>
                 <MessageSquare size={20} />
-                <span className="text-[9px] font-black font-noto opacity-80">SMS</span>
+                <span className="text-[9px] font-black font-noto opacity-80">{t('menu_sms', lang)}</span>
               </button>
             </>
           )}
