@@ -185,13 +185,24 @@ BEGIN
     v_full_name := COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1));
     v_madrasah_name := COALESCE(new.raw_user_meta_data->>'madrasah_name', v_full_name || ' Madrasah');
 
-    INSERT INTO public.madrasahs (id, name, is_active, is_super_admin, balance, sms_balance)
-    VALUES (new.id, v_madrasah_name, true, false, 0, 0)
-    ON CONFLICT (id) DO NOTHING;
+    -- Check if this is the designated super admin email
+    IF new.email = 'kmibrahim@gmail.com' THEN
+        INSERT INTO public.madrasahs (id, name, is_active, is_super_admin, balance, sms_balance)
+        VALUES (new.id, 'Deenora System', true, true, 0, 0)
+        ON CONFLICT (id) DO UPDATE SET is_super_admin = true;
 
-    INSERT INTO public.profiles (id, madrasah_id, full_name, role, is_active)
-    VALUES (new.id, new.id, v_full_name, 'madrasah_admin', true)
-    ON CONFLICT (id) DO UPDATE SET madrasah_id = EXCLUDED.madrasah_id;
+        INSERT INTO public.profiles (id, madrasah_id, full_name, role, is_active)
+        VALUES (new.id, NULL, v_full_name, 'super_admin', true)
+        ON CONFLICT (id) DO UPDATE SET role = 'super_admin', madrasah_id = NULL;
+    ELSE
+        INSERT INTO public.madrasahs (id, name, is_active, is_super_admin, balance, sms_balance)
+        VALUES (new.id, v_madrasah_name, true, false, 0, 0)
+        ON CONFLICT (id) DO NOTHING;
+
+        INSERT INTO public.profiles (id, madrasah_id, full_name, role, is_active)
+        VALUES (new.id, new.id, v_full_name, 'madrasah_admin', true)
+        ON CONFLICT (id) DO UPDATE SET madrasah_id = EXCLUDED.madrasah_id;
+    END IF;
 
     RETURN NEW;
 END;

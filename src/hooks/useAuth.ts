@@ -25,17 +25,22 @@ export const useAuth = () => {
       if (profileData) {
         setProfile(profileData);
         
-        // Then get the madrasah
-        const { data: madrasahData, error: mError } = await supabase
-          .from('madrasahs')
-          .select('*')
-          .eq('id', profileData.madrasah_id)
-          .maybeSingle();
+        // Then get the madrasah if madrasah_id exists
+        if (profileData.madrasah_id) {
+          const { data: madrasahData, error: mError } = await supabase
+            .from('madrasahs')
+            .select('*')
+            .eq('id', profileData.madrasah_id)
+            .maybeSingle();
 
-        if (mError) throw mError;
-        
-        setMadrasah(madrasahData);
-        if (madrasahData) OfflineService.setCache('profile', madrasahData);
+          if (mError) throw mError;
+          
+          setMadrasah(madrasahData);
+          if (madrasahData) OfflineService.setCache('profile', madrasahData);
+        } else if (profileData.role === 'super_admin') {
+          // Super admins might not have a madrasah_id
+          setMadrasah(null);
+        }
       } else {
         // If profile doesn't exist yet, it might be the trigger lagging or 
         // a manual auth user without SQL data.

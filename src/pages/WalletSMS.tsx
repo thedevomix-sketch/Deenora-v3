@@ -6,6 +6,7 @@ import { supabase, smsApi } from 'supabase';
 import { SMSTemplate, Language, Madrasah, Class, Student, Transaction } from 'types';
 import { t } from 'translations';
 import { sortMadrasahClasses } from 'pages/Classes';
+import { getSmsLengthInfo } from 'utils/smsUtils';
 
 interface WalletSMSProps {
   lang: Language;
@@ -317,19 +318,27 @@ const WalletSMS: React.FC<WalletSMSProps> = ({ lang, madrasah, triggerRefresh, d
               <div className="space-y-4">
                 <h4 className="text-[11px] font-black text-[#1E3A8A] uppercase tracking-widest px-1">৩. বার্তা লিখুন</h4>
                 <div className="relative">
-                  <textarea className="w-full h-32 px-5 py-5 bg-slate-50 border-2 border-slate-100 rounded-[1.8rem] text-[#1E3A8A] font-bold outline-none font-noto resize-none" placeholder="বার্তা..." value={bulkMessage} onChange={(e) => setBulkMessage(e.target.value)} maxLength={160} />
-                  <div className="absolute bottom-4 right-5 bg-white px-2 py-0.5 rounded-lg border border-slate-100 shadow-sm">
-                     <span className="text-[10px] font-black text-[#2563EB]">{bulkMessage.length}/160</span>
+                  <textarea className="w-full h-32 px-5 py-5 bg-slate-50 border-2 border-slate-100 rounded-[1.8rem] text-[#1E3A8A] font-bold outline-none font-noto resize-none" placeholder="বার্তা..." value={bulkMessage} onChange={(e) => setBulkMessage(e.target.value)} />
+                  <div className="absolute bottom-4 right-5 bg-white px-2 py-0.5 rounded-lg border border-slate-100 shadow-sm flex gap-2">
+                     {(() => {
+                        const info = getSmsLengthInfo(bulkMessage);
+                        return (
+                          <>
+                            <span className="text-[10px] font-black text-slate-400">{info.isBangla ? 'Bangla' : 'English'}</span>
+                            <span className="text-[10px] font-black text-[#2563EB]">{info.length}/{info.maxAllowed} ({info.parts} SMS)</span>
+                          </>
+                        );
+                     })()}
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3">
-                <button onClick={handleSendBulk} disabled={sendingBulk || !bulkMessage.trim() || !selectedClassId || classStudents.length === 0} className="w-full h-[64px] bg-[#2563EB] text-white font-black rounded-full shadow-premium flex items-center justify-center gap-3 text-lg disabled:opacity-40 active:scale-95 transition-all">
+                <button onClick={handleSendBulk} disabled={sendingBulk || !bulkMessage.trim() || !selectedClassId || classStudents.length === 0 || getSmsLengthInfo(bulkMessage).parts > 7} className="w-full h-[64px] bg-[#2563EB] text-white font-black rounded-full shadow-premium flex items-center justify-center gap-3 text-lg disabled:opacity-40 active:scale-95 transition-all">
                   {sendingBulk ? <Loader2 className="animate-spin" size={24} /> : bulkSuccess ? 'সফল!' : <><Send size={20} /> বাল্ক এসএমএস পাঠান</>}
                 </button>
                 
-                <button onClick={handleSendFreeBulk} disabled={sendingBulk || !bulkMessage.trim() || classStudents.length === 0} className="w-full h-[54px] bg-slate-800 text-white font-black rounded-full shadow-lg flex items-center justify-center gap-3 text-sm disabled:opacity-40 active:scale-95 transition-all">
+                <button onClick={handleSendFreeBulk} disabled={sendingBulk || !bulkMessage.trim() || classStudents.length === 0 || getSmsLengthInfo(bulkMessage).parts > 7} className="w-full h-[54px] bg-slate-800 text-white font-black rounded-full shadow-lg flex items-center justify-center gap-3 text-sm disabled:opacity-40 active:scale-95 transition-all">
                   <Smartphone size={20} /> ফ্রি এসএমএস (সিম কার্ড)
                 </button>
               </div>
@@ -502,11 +511,22 @@ const WalletSMS: React.FC<WalletSMSProps> = ({ lang, madrasah, triggerRefresh, d
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block px-1">শিরোনাম</label>
                     <input type="text" className="w-full h-14 bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 font-black text-[#2E0B5E] font-noto outline-none focus:border-[#8D30F4]/30" placeholder="যেমন: উপস্থিতি" value={tempTitle} onChange={(e) => setTempTitle(e.target.value)} />
                  </div>
-                 <div className="space-y-2 px-1">
+                 <div className="space-y-2 px-1 relative">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block px-1">মেসেজ বডি</label>
                     <textarea className="w-full h-32 bg-slate-50 border-2 border-slate-100 rounded-[1.8rem] px-6 py-4 font-bold text-slate-600 font-noto outline-none focus:border-[#8D30F4]/30 resize-none" placeholder="আপনার মেসেজ এখানে লিখুন..." value={tempBody} onChange={(e) => setTempBody(e.target.value)} />
+                    <div className="absolute bottom-4 right-5 bg-white px-2 py-0.5 rounded-lg border border-slate-100 shadow-sm flex gap-2">
+                       {(() => {
+                          const info = getSmsLengthInfo(tempBody);
+                          return (
+                            <>
+                              <span className="text-[10px] font-black text-slate-400">{info.isBangla ? 'Bangla' : 'English'}</span>
+                              <span className="text-[10px] font-black text-[#8D30F4]">{info.length}/{info.maxAllowed} ({info.parts} SMS)</span>
+                            </>
+                          );
+                       })()}
+                    </div>
                  </div>
-                 <button onClick={handleSaveTemplate} disabled={isSaving || !tempTitle || !tempBody} className="w-full h-16 premium-btn text-white font-black rounded-full shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all text-lg">
+                 <button onClick={handleSaveTemplate} disabled={isSaving || !tempTitle || !tempBody || getSmsLengthInfo(tempBody).parts > 7} className="w-full h-16 premium-btn text-white font-black rounded-full shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all text-lg">
                     {isSaving ? <Loader2 className="animate-spin" size={24} /> : <><Save size={24} /> {editingId ? 'আপডেট করুন' : 'সেভ করুন'}</>}
                  </button>
               </div>

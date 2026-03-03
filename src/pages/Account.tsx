@@ -146,7 +146,9 @@ const Account: React.FC<AccountProps> = ({ lang, setLang, onProfileUpdate, setVi
     } catch (e: any) { alert(e.message); } finally { setSaving(false); }
   };
 
-  if (!madrasah) return null;
+  if (!madrasah && !isSuperAdmin) return null;
+
+  const displayName = isSuperAdmin ? (lang === 'bn' ? 'সুপার অ্যাডমিন' : 'Super Admin') : (madrasah?.name || 'User');
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-36 relative z-10">
@@ -175,7 +177,7 @@ const Account: React.FC<AccountProps> = ({ lang, setLang, onProfileUpdate, setVi
               <div className="w-40 h-40 bg-white p-2.5 rounded-full shadow-bubble border-[12px] border-slate-50 flex items-center justify-center overflow-hidden">
                 {logoUrl ? <img src={logoUrl} className="w-full h-full object-cover rounded-full" alt="Profile" /> : <div className="w-full h-full bg-blue-50 flex items-center justify-center text-[#2563EB]"><UserIcon size={70} strokeWidth={1.5} /></div>}
               </div>
-              {!isTeacher && (
+              {!isTeacher && madrasah && (
                 <button 
                   onClick={() => fileInputRef.current?.click()} 
                   className="absolute bottom-2 right-2 w-11 h-11 bg-[#2563EB] text-white rounded-2xl flex items-center justify-center shadow-premium border-4 border-white active:scale-90 transition-all z-30"
@@ -187,26 +189,29 @@ const Account: React.FC<AccountProps> = ({ lang, setLang, onProfileUpdate, setVi
             </div>
           </div>
           <div className="space-y-6">
-             {/* Fixed Madrasah Name Issue: Changed font-black to font-bold and reset shadow to fix "ghosting/distortion" */}
-             <h2 className="text-[26px] sm:text-[32px] font-bold text-[#1E3A8A] font-noto tracking-tight leading-snug px-4 break-words [text-shadow:none]">{madrasah.name}</h2>
+             <h2 className="text-[26px] sm:text-[32px] font-bold text-[#1E3A8A] font-noto tracking-tight leading-snug px-4 break-words [text-shadow:none]">{displayName}</h2>
              
-             <div className="flex flex-col items-center gap-2">
-                <div className="inline-flex px-5 py-1.5 bg-blue-50 text-[#2563EB] rounded-2xl border border-blue-100">
-                   <ShieldCheck size={14} className="mr-2 shrink-0" />
-                   <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{t('sender_id', lang)}: {madrasah.reve_caller_id || 'DEFAULT'}</span>
-                </div>
-             </div>
+             {madrasah && (
+               <>
+                 <div className="flex flex-col items-center gap-2">
+                    <div className="inline-flex px-5 py-1.5 bg-blue-50 text-[#2563EB] rounded-2xl border border-blue-100">
+                       <ShieldCheck size={14} className="mr-2 shrink-0" />
+                       <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{t('sender_id', lang)}: {madrasah.reve_caller_id || 'DEFAULT'}</span>
+                    </div>
+                 </div>
 
-             <div className="pt-4">
-                <div onClick={() => copyToClipboard(madrasah.id)} className="bg-slate-50/70 p-5 rounded-[2.5rem] border border-slate-100 flex items-center gap-5 active:scale-[0.98] cursor-pointer">
-                   <Fingerprint size={24} className="text-[#2563EB] shrink-0" />
-                   <div className="flex-1 text-left min-w-0">
-                      <p className="text-[9px] font-black text-slate-400 uppercase mb-1">{t('madrasah_uuid', lang)}</p>
-                      <p className="text-[12px] font-black text-[#2563EB] truncate">{madrasah.id}</p>
-                   </div>
-                   {copiedId ? <Check size={22} className="text-emerald-500 shrink-0" /> : <Copy size={20} className="text-slate-200 shrink-0" />}
-                </div>
-             </div>
+                 <div className="pt-4">
+                    <div onClick={() => copyToClipboard(madrasah.id)} className="bg-slate-50/70 p-5 rounded-[2.5rem] border border-slate-100 flex items-center gap-5 active:scale-[0.98] cursor-pointer">
+                       <Fingerprint size={24} className="text-[#2563EB] shrink-0" />
+                       <div className="flex-1 text-left min-w-0">
+                          <p className="text-[9px] font-black text-slate-400 uppercase mb-1">{t('madrasah_uuid', lang)}</p>
+                          <p className="text-[12px] font-black text-[#2563EB] truncate">{madrasah.id}</p>
+                       </div>
+                       {copiedId ? <Check size={22} className="text-emerald-500 shrink-0" /> : <Copy size={20} className="text-slate-200 shrink-0" />}
+                    </div>
+                 </div>
+               </>
+             )}
           </div>
         </div>
       </div>

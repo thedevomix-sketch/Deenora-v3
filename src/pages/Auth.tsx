@@ -37,8 +37,10 @@ const Auth: React.FC<AuthProps> = ({ lang }) => {
       if (data.user) {
         localStorage.removeItem('teacher_session');
         offlineApi.removeCache('profile');
-        const { data: profile } = await supabase.from('madrasahs').select('name').eq('id', data.user.id).single();
+        // Use maybeSingle instead of single to handle super admins who don't have a madrasah entry
+        const { data: profile } = await supabase.from('madrasahs').select('name').eq('id', data.user.id).maybeSingle();
         if (profile) localStorage.setItem('m_name', profile.name);
+        else localStorage.setItem('m_name', 'Super Admin'); // Default name for super admin
       }
     } catch (err: any) { 
       setError(t('login_error', lang)); 

@@ -1,6 +1,7 @@
 
 import { supabase } from 'lib/supabase';
 import { Student } from 'types';
+import { getSmsLengthInfo } from 'utils/smsUtils';
 
 const normalizePhone = (phone: string): string => {
   let p = phone.replace(/\D/g, ''); 
@@ -50,14 +51,23 @@ export const SMSService = {
     const mData = mRes.data;
     if (!mData) throw new Error("Security Violation: Unauthorized Madrasah context.");
     
+    const { parts } = getSmsLengthInfo(message);
+    if (parts > 7) throw new Error("SMS length exceeds the maximum limit of 7 parts.");
+
+    const totalSmsNeeded = students.length * parts;
     const balance = mData.sms_balance || 0;
-    if (balance < students.length) {
-      throw new Error(`ব্যালেন্স পর্যাপ্ত নয়। প্রয়োজন: ${students.length}, আছে: ${balance}`);
+    if (balance < totalSmsNeeded) {
+      throw new Error(`ব্যালেন্স পর্যাপ্ত নয়। প্রয়োজন: ${totalSmsNeeded}, আছে: ${balance}`);
+    }
+
+    const studentIds: string[] = [];
+    for (let i = 0; i < parts; i++) {
+      studentIds.push(...students.map(s => s.id));
     }
 
     const { data: rpcData, error: rpcError } = await supabase.rpc('send_bulk_sms_rpc', {
       p_madrasah_id: madrasahId,
-      p_student_ids: students.map(s => s.id),
+      p_student_ids: studentIds,
       p_message: message
     });
 
