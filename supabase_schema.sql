@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS public.institutions (
   reve_secret_key TEXT,
   reve_caller_id TEXT,
   reve_client_id TEXT,
+  subscription_end DATE,
   login_code TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -277,16 +278,20 @@ ALTER TABLE public.sms_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
 -- Policies for Institutions
+DROP POLICY IF EXISTS "Super admins can do everything on institutions" ON public.institutions;
 CREATE POLICY "Super admins can do everything on institutions" ON public.institutions
   FOR ALL USING (auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'super_admin'));
 
+DROP POLICY IF EXISTS "Users can view their own institution" ON public.institutions;
 CREATE POLICY "Users can view their own institution" ON public.institutions
   FOR SELECT USING (id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
 
 -- Policies for Profiles
+DROP POLICY IF EXISTS "Super admins can view all profiles" ON public.profiles;
 CREATE POLICY "Super admins can view all profiles" ON public.profiles
   FOR SELECT USING (auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'super_admin'));
 
+DROP POLICY IF EXISTS "Users can view profiles in their institution" ON public.profiles;
 CREATE POLICY "Users can view profiles in their institution" ON public.profiles
   FOR SELECT USING (institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid()));
 
@@ -294,66 +299,77 @@ CREATE POLICY "Users can view profiles in their institution" ON public.profiles
 -- We can't use a generic function easily in SQL script without defining it first, 
 -- so we'll write them out for major tables.
 
+DROP POLICY IF EXISTS "Tenant isolation for classes" ON public.classes;
 CREATE POLICY "Tenant isolation for classes" ON public.classes
   FOR ALL USING (
     institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
     OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
   );
 
+DROP POLICY IF EXISTS "Tenant isolation for students" ON public.students;
 CREATE POLICY "Tenant isolation for students" ON public.students
   FOR ALL USING (
     institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
     OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
   );
 
+DROP POLICY IF EXISTS "Tenant isolation for teachers" ON public.teachers;
 CREATE POLICY "Tenant isolation for teachers" ON public.teachers
   FOR ALL USING (
     institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
     OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
   );
 
+DROP POLICY IF EXISTS "Tenant isolation for fee_structures" ON public.fee_structures;
 CREATE POLICY "Tenant isolation for fee_structures" ON public.fee_structures
   FOR ALL USING (
     institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
     OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
   );
 
+DROP POLICY IF EXISTS "Tenant isolation for fees" ON public.fees;
 CREATE POLICY "Tenant isolation for fees" ON public.fees
   FOR ALL USING (
     institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
     OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
   );
 
+DROP POLICY IF EXISTS "Tenant isolation for ledger" ON public.ledger;
 CREATE POLICY "Tenant isolation for ledger" ON public.ledger
   FOR ALL USING (
     institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
     OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
   );
 
+DROP POLICY IF EXISTS "Tenant isolation for attendance" ON public.attendance;
 CREATE POLICY "Tenant isolation for attendance" ON public.attendance
   FOR ALL USING (
     institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
     OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
   );
 
+DROP POLICY IF EXISTS "Tenant isolation for exams" ON public.exams;
 CREATE POLICY "Tenant isolation for exams" ON public.exams
   FOR ALL USING (
     institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
     OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
   );
 
+DROP POLICY IF EXISTS "Tenant isolation for sms_templates" ON public.sms_templates;
 CREATE POLICY "Tenant isolation for sms_templates" ON public.sms_templates
   FOR ALL USING (
     institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
     OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
   );
 
+DROP POLICY IF EXISTS "Tenant isolation for transactions" ON public.transactions;
 CREATE POLICY "Tenant isolation for transactions" ON public.transactions
   FOR ALL USING (
     institution_id = (SELECT institution_id FROM public.profiles WHERE id = auth.uid())
     OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
   );
 
+DROP FUNCTION IF EXISTS public.get_monthly_dues_report(uuid, uuid, text);
 CREATE OR REPLACE FUNCTION public.get_monthly_dues_report(p_class_id UUID, p_institution_id UUID, p_month TEXT)
 RETURNS TABLE (
   student_id UUID,

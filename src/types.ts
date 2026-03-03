@@ -26,6 +26,7 @@ export interface Institution {
     attendance_type: 'daily' | 'period';
     fee_structure: 'monthly' | 'session';
     ui_mode: 'madrasah' | 'school';
+    template_set?: string;
   };
   theme: string;
   status: 'active' | 'suspended' | 'trial';
@@ -40,6 +41,7 @@ export interface Institution {
   reve_secret_key?: string;
   reve_caller_id?: string;
   reve_client_id?: string;
+  subscription_end?: string;
 }
 
 export interface Profile {

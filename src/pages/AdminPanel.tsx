@@ -69,6 +69,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     seat_plan: true,
     accounting: true
   });
+  const [editSubscriptionEnd, setEditSubscriptionEnd] = useState('');
+  const [editStatus, setEditStatus] = useState<'active' | 'suspended' | 'trial'>('active');
+  const [editUiMode, setEditUiMode] = useState<'madrasah' | 'school'>('madrasah');
+  const [editTheme, setEditTheme] = useState('default');
+  const [editTemplateSet, setEditTemplateSet] = useState('default');
 
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const [isRefreshingStats, setIsRefreshingStats] = useState(false);
@@ -200,6 +205,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
       seat_plan: true,
       accounting: true
     });
+    setEditSubscriptionEnd(user.subscription_end || '');
+    setEditStatus(user.status || 'active');
+    setEditUiMode(user.config_json?.ui_mode || 'madrasah');
+    setEditTheme(user.theme || 'default');
+    setEditTemplateSet(user.config_json?.template_set || 'default');
     
     setView('details');
     
@@ -235,9 +245,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
         reve_secret_key: editReveSecretKey.trim() || null,
         reve_caller_id: editReveCallerId.trim() || null,
         institution_type: selectedUser.institution_type,
+        subscription_end: editSubscriptionEnd || null,
+        status: editStatus,
+        theme: editTheme,
         config_json: {
           ...selectedUser.config_json,
-          modules: editModules
+          modules: editModules,
+          ui_mode: editUiMode,
+          template_set: editTemplateSet
         }
       }).eq('id', selectedUser.id);
       
@@ -714,6 +729,74 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                                     </button>
                                   ))}
                                </div>
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="bg-slate-50 p-6 rounded-[2.5rem] space-y-6">
+                         <div className="flex items-center justify-between px-1">
+                            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                               <Settings size={14} className="text-[#2563EB]" /> Subscription & Settings
+                            </h4>
+                         </div>
+                         <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                               <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Status</label>
+                                  <select 
+                                    className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
+                                    value={editStatus}
+                                    onChange={(e) => setEditStatus(e.target.value as any)}
+                                  >
+                                    <option value="active">Active</option>
+                                    <option value="suspended">Suspended</option>
+                                    <option value="trial">Trial</option>
+                                  </select>
+                               </div>
+                               <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Valid Till</label>
+                                  <input type="date" className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm" value={editSubscriptionEnd} onChange={(e) => setEditSubscriptionEnd(e.target.value)} />
+                               </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                               <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">UI Mode</label>
+                                  <select 
+                                    className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
+                                    value={editUiMode}
+                                    onChange={(e) => setEditUiMode(e.target.value as any)}
+                                  >
+                                    <option value="madrasah">Madrasah</option>
+                                    <option value="school">School</option>
+                                  </select>
+                               </div>
+                               <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Theme</label>
+                                  <select 
+                                    className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
+                                    value={editTheme}
+                                    onChange={(e) => setEditTheme(e.target.value)}
+                                  >
+                                    <option value="default">Default</option>
+                                    <option value="dark">Dark Mode</option>
+                                    <option value="blue">Blue</option>
+                                    <option value="green">Green</option>
+                                  </select>
+                               </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Template Set</label>
+                               <select 
+                                 className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
+                                 value={editTemplateSet}
+                                 onChange={(e) => setEditTemplateSet(e.target.value)}
+                               >
+                                 <option value="default">Default Templates</option>
+                                 <option value="premium">Premium Templates</option>
+                                 <option value="custom">Custom</option>
+                               </select>
                             </div>
                          </div>
                       </div>
