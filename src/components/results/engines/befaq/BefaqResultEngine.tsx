@@ -84,9 +84,11 @@ const BefaqResultEngine: React.FC<BefaqResultEngineProps> = ({ lang, madrasah, o
     }
     setIsSaving(true);
     try {
+        const selectedClass = classes.find(c => c.id === classId);
         const { error } = await supabase.from('befaq_exams').insert({
           institution_id: madrasah.id,
           marhala_id: classId,
+          class_name: selectedClass?.class_name || 'Unknown',
           exam_name: examName,
           exam_year: examYear,
           is_active: true
