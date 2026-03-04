@@ -5,7 +5,7 @@ import { Search, Clock, User as UserIcon, RefreshCw, PhoneCall, X, MessageCircle
 import { supabase, offlineApi } from 'supabase';
 import { Student, Language, Institution } from 'types';
 import { t } from 'translations';
-import RiskAnalysis from 'components/RiskAnalysis';
+import StudentRiskAnalysis from 'components/StudentRiskAnalysis';
 import SmartFeeAnalytics from 'components/SmartFeeAnalytics';
 import SmartResultAnalytics from 'components/SmartResultAnalytics';
 import { isValidUUID } from 'utils/validation';
@@ -122,7 +122,7 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
 
       {institutionId && (
         <div className="space-y-6">
-          <RiskAnalysis 
+          <StudentRiskAnalysis 
             institutionId={institutionId} 
             lang={lang} 
             onStudentClick={onStudentClick} 

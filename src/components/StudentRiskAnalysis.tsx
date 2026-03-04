@@ -25,7 +25,7 @@ interface RiskAnalysisProps {
   onStudentClick: (student: any) => void;
 }
 
-const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ institutionId, lang, onStudentClick }) => {
+const StudentRiskAnalysis: React.FC<RiskAnalysisProps> = ({ institutionId, lang, onStudentClick }) => {
   const [risks, setRisks] = useState<RiskData[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
@@ -38,7 +38,7 @@ const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ institutionId, lang, onStud
     if (!isValidUUID(institutionId)) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_student_risk_analysis', { p_institution_id: institutionId });
+      const { data, error } = await supabase.rpc('get_student_risk_analysis', { p_madrasah_id: institutionId });
       if (error) throw error;
       if (data) setRisks(data);
     } catch (err) {
@@ -136,4 +136,4 @@ const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ institutionId, lang, onStud
   );
 };
 
-export default RiskAnalysis;
+export default StudentRiskAnalysis;
