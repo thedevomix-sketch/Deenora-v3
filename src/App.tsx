@@ -130,7 +130,7 @@ const App: React.FC = () => {
       case 'admin-approvals':
       case 'admin-dashboard':
         if (role !== 'super_admin') { setView('home'); return null; }
-        return <AdminPanel lang={lang} currentView={view === 'admin-approvals' ? 'approvals' : view === 'admin-dashboard' ? 'dashboard' : 'list'} dataVersion={dataVersion} />;
+        return <AdminPanel lang={lang} currentView={view === 'admin-approvals' ? 'approvals' : view === 'admin-dashboard' ? 'dashboard' : 'list'} dataVersion={dataVersion} onProfileUpdate={refreshMadrasah} />;
       case 'wallet-sms':
         return <WalletSMS lang={lang} madrasah={madrasah} triggerRefresh={triggerRefresh} dataVersion={dataVersion} />;
       case 'data-management':

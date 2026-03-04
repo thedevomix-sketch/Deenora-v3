@@ -29,14 +29,14 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, lang, m
   const role = profile?.role || 'teacher';
   
   // Dynamic module configuration
-  const modules = madrasah?.config_json?.modules || {
+  const modules = React.useMemo(() => madrasah?.config_json?.modules || {
     attendance: true,
     fees: true,
     results: true,
     admit_card: true,
     seat_plan: true,
     accounting: true
-  };
+  }, [madrasah]);
 
   const fetchDynamicNotifications = async () => {
     if (!madrasah?.id) return;
@@ -67,8 +67,8 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, lang, m
   const inactiveColor = '#94A3B8';
 
   return (
-    <div className="flex flex-col w-full h-full relative bg-[#F0F7FF] overflow-hidden">
-      <header className="flex-none px-6 pt-[calc(env(safe-area-inset-top)+8px)] pb-3 flex items-center justify-between relative z-10 bg-[#F0F7FF]/80 backdrop-blur-md border-b border-slate-100">
+    <div className={`flex flex-col w-full h-full relative overflow-hidden ${madrasah?.theme === 'dark' ? 'bg-slate-900 text-white' : 'bg-[#F0F7FF]'}`}>
+      <header className={`flex-none px-6 pt-[calc(env(safe-area-inset-top)+8px)] pb-3 flex items-center justify-between relative z-10 ${madrasah?.theme === 'dark' ? 'bg-slate-900/80 border-slate-800' : 'bg-[#F0F7FF]/80 border-slate-100'} backdrop-blur-md border-b`}>
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className="w-11 h-11 rounded-full flex items-center justify-center bg-blue-50 shadow-sm border border-blue-100 shrink-0 overflow-hidden">
             {isSuperAdmin ? <ShieldCheck size={24} className="text-[#2563EB]" /> : (madrasah?.logo_url ? <img src={madrasah.logo_url} className="w-full h-full object-cover" alt="Logo" /> : <BookOpen size={22} className="text-[#2563EB]" />)}

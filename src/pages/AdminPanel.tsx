@@ -16,9 +16,10 @@ interface AdminPanelProps {
   lang: Language;
   currentView?: 'list' | 'dashboard' | 'approvals';
   dataVersion?: number;
+  onProfileUpdate?: () => void;
 }
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dataVersion = 0 }) => {
+const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dataVersion = 0, onProfileUpdate }) => {
   const [madrasahs, setMadrasahs] = useState<InstitutionWithStats[]>([]);
   const [pendingTrans, setPendingTrans] = useState<Transaction[]>([]);
   const [transactionHistory, setTransactionHistory] = useState<Transaction[]>([]);
@@ -273,6 +274,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
       
       setStatusModal({ show: true, type: 'success', title: 'সফল', message: 'মাদরাসা প্রোফাইল আপডেট হয়েছে।' });
       initData(true);
+      if (onProfileUpdate) onProfileUpdate();
       setView('list');
     } catch (err: any) {
       setStatusModal({ show: true, type: 'error', title: 'ব্যর্থ', message: err.message });
