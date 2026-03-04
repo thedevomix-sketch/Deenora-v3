@@ -23,7 +23,7 @@ import { t } from 'translations';
 import { BookOpen, ShieldAlert } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { session, profile, madrasah, loading, authError, handleLogout } = useAuth();
+  const { session, profile, madrasah, loading, authError, handleLogout, refreshMadrasah } = useAuth();
   const [view, setView] = useState<View>('home');
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -31,7 +31,10 @@ const App: React.FC = () => {
   const [dataVersion, setDataVersion] = useState(0); 
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('app_lang') as Language) || 'bn');
 
-  const triggerRefresh = () => setDataVersion(prev => prev + 1);
+  const triggerRefresh = () => {
+    setDataVersion(prev => prev + 1);
+    refreshMadrasah();
+  };
 
   useEffect(() => {
     if (profile?.role === 'super_admin' && view === 'home') {
@@ -122,7 +125,7 @@ const App: React.FC = () => {
       case 'student-form':
         return <StudentForm student={selectedStudent} madrasah={madrasah} defaultClassId={selectedClass?.id} isEditing={isEditing} onSuccess={() => { triggerRefresh(); setView('students'); }} onCancel={() => setView('students')} lang={lang} />;
       case 'account':
-        return <Account lang={lang} setLang={(l) => { setLang(l); localStorage.setItem('app_lang', l); }} initialMadrasah={madrasah} isSuperAdmin={role === 'super_admin'} setView={setView} onLogout={handleLogout} isTeacher={role === 'teacher'} />;
+        return <Account lang={lang} setLang={(l) => { setLang(l); localStorage.setItem('app_lang', l); }} initialMadrasah={madrasah} isSuperAdmin={role === 'super_admin'} setView={setView} onLogout={handleLogout} isTeacher={role === 'teacher'} onProfileUpdate={refreshMadrasah} />;
       case 'admin-panel':
       case 'admin-approvals':
       case 'admin-dashboard':

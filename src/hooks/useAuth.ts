@@ -64,6 +64,12 @@ export const useAuth = () => {
     }
   };
 
+  const refreshMadrasah = async () => {
+    if (session?.user?.id) {
+      await fetchUserProfile(session.user.id, session.user.email);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     localStorage.removeItem('teacher_session');
@@ -146,8 +152,30 @@ export const useAuth = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    let channel: any;
+    if (profile?.institution_id) {
+      channel = supabase
+        .channel('institution-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'institutions',
+            filter: `id=eq.${profile.institution_id}`,
+          },
+          (payload) => {
+            setMadrasah(payload.new as Institution);
+          }
+        )
+        .subscribe();
+    }
 
-  return { session, profile, madrasah, loading, authError, handleLogout };
+    return () => {
+      subscription.unsubscribe();
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [profile?.institution_id]);
+
+  return { session, profile, madrasah, loading, authError, handleLogout, refreshMadrasah };
 };
