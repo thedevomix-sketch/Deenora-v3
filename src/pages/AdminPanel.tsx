@@ -76,6 +76,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   const [editUiMode, setEditUiMode] = useState<'madrasah' | 'school'>('madrasah');
   const [editTheme, setEditTheme] = useState('default');
   const [editTemplateSet, setEditTemplateSet] = useState('default');
+  const [editResultEngine, setEditResultEngine] = useState<'school' | 'befaq' | 'qawmi_custom'>('school');
+  const [editResultSystem, setEditResultSystem] = useState<'grading' | 'marks' | 'hifz'>('grading');
+  const [editAttendanceType, setEditAttendanceType] = useState<'daily' | 'period'>('daily');
+  const [editFeeStructure, setEditFeeStructure] = useState<'monthly' | 'session'>('monthly');
   const [editInstitutionType, setEditInstitutionType] = useState<'madrasah' | 'school' | 'kindergarten' | 'nurani' | 'system'>('madrasah');
 
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
@@ -223,6 +227,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     setEditUiMode(user.config_json?.ui_mode || 'madrasah');
     setEditTheme(user.theme || 'default');
     setEditTemplateSet(user.config_json?.template_set || 'default');
+    setEditResultEngine(user.config_json?.result_engine || 'school');
+    setEditResultSystem(user.config_json?.result_system || 'grading');
+    setEditAttendanceType(user.config_json?.attendance_type || 'daily');
+    setEditFeeStructure(user.config_json?.fee_structure || 'monthly');
     setEditInstitutionType(user.institution_type || 'madrasah');
     
     setView('details');
@@ -266,7 +274,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
           ...(selectedUser.config_json || {}),
           modules: editModules,
           ui_mode: editUiMode,
-          template_set: editTemplateSet
+          template_set: editTemplateSet,
+          result_engine: editResultEngine,
+          result_system: editResultSystem,
+          attendance_type: editAttendanceType,
+          fee_structure: editFeeStructure
         }
       }).eq('id', selectedUser.id);
       
@@ -685,6 +697,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                           <div className="flex items-center gap-2 mt-1.5 text-slate-400">
                              <Clock size={10} />
                              <p className="text-[9px] font-bold">{new Date(tr.created_at).toLocaleDateString('bn-BD')}</p>
+                             <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Result Engine</label>
+                                <select 
+                                  className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
+                                  value={editResultEngine}
+                                  onChange={(e) => setEditResultEngine(e.target.value as any)}
+                                >
+                                  <option value="school">School (GPA)</option>
+                                  <option value="befaq">Befaq (Division)</option>
+                                  <option value="qawmi_custom">Qawmi Custom</option>
+                                </select>
+                             </div>
                           </div>
                        </div>
                        <div className="text-right ml-4">
@@ -880,6 +904,52 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                                  <option value="default">Default Templates</option>
                                  <option value="premium">Premium Templates</option>
                                  <option value="custom">Custom</option>
+                               </select>
+                            </div>
+                            <div className="space-y-1.5">
+                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Result Engine</label>
+                               <select 
+                                 className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
+                                 value={editResultEngine}
+                                 onChange={(e) => setEditResultEngine(e.target.value as any)}
+                               >
+                                 <option value="school">School (GPA)</option>
+                                 <option value="befaq">Befaq (Division)</option>
+                                 <option value="qawmi_custom">Qawmi Custom</option>
+                               </select>
+                            </div>
+                            <div className="space-y-1.5">
+                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Result System</label>
+                               <select 
+                                 className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
+                                 value={editResultSystem}
+                                 onChange={(e) => setEditResultSystem(e.target.value as any)}
+                               >
+                                 <option value="grading">Grading (GPA)</option>
+                                 <option value="marks">Marks Only</option>
+                                 <option value="hifz">Hifz</option>
+                               </select>
+                            </div>
+                            <div className="space-y-1.5">
+                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Attendance Type</label>
+                               <select 
+                                 className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
+                                 value={editAttendanceType}
+                                 onChange={(e) => setEditAttendanceType(e.target.value as any)}
+                               >
+                                 <option value="daily">Daily</option>
+                                 <option value="period">Period Wise</option>
+                               </select>
+                            </div>
+                            <div className="space-y-1.5">
+                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Fee Structure</label>
+                               <select 
+                                 className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
+                                 value={editFeeStructure}
+                                 onChange={(e) => setEditFeeStructure(e.target.value as any)}
+                               >
+                                 <option value="monthly">Monthly</option>
+                                 <option value="session">Session Based</option>
                                </select>
                             </div>
                          </div>

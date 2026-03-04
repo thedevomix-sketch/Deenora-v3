@@ -22,6 +22,7 @@ export interface Institution {
       seat_plan: boolean;
       accounting: boolean;
     };
+    result_engine: 'school' | 'befaq' | 'qawmi_custom';
     result_system: 'grading' | 'marks' | 'hifz';
     attendance_type: 'daily' | 'period';
     fee_structure: 'monthly' | 'session';
@@ -42,6 +43,42 @@ export interface Institution {
   reve_caller_id?: string;
   reve_client_id?: string;
   subscription_end?: string;
+}
+
+export interface BefaqExam {
+  id: string;
+  institution_id: string;
+  exam_name: string;
+  exam_year: string;
+  marhala_id: string; // class_id
+  is_active: boolean;
+  created_at: string;
+  classes?: Class;
+}
+
+export interface BefaqSubject {
+  id: string;
+  exam_id: string;
+  subject_name: string;
+  total_marks: number;
+  passing_marks: number;
+}
+
+export interface BefaqResult {
+  id: string;
+  exam_id: string;
+  student_id: string;
+  subject_id: string;
+  marks_obtained: number;
+}
+
+export interface QawmiResultConfig {
+  id: string;
+  institution_id: string;
+  config_name: string;
+  grade_settings: any; // JSON
+  pass_mark_settings: any; // JSON
+  is_active: boolean;
 }
 
 export interface Profile {
