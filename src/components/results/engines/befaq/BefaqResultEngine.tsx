@@ -78,20 +78,34 @@ const BefaqResultEngine: React.FC<BefaqResultEngineProps> = ({ lang, madrasah, o
   };
 
   const handleAddExam = async () => {
-    if (!madrasah || !examName || !classId) return;
-    setIsSaving(true);
-    const { error } = await supabase.from('befaq_exams').insert({
-      institution_id: madrasah.id,
-      marhala_id: classId,
-      exam_name: examName,
-      exam_year: examYear,
-      is_active: true
-    });
-    if (!error) {
-      setShowAddExam(false);
-      fetchExams();
+    if (!madrasah || !examName || !classId) {
+        alert('Please fill all fields');
+        return;
     }
-    setIsSaving(false);
+    setIsSaving(true);
+    try {
+        const { error } = await supabase.from('befaq_exams').insert({
+          institution_id: madrasah.id,
+          marhala_id: classId,
+          exam_name: examName,
+          exam_year: examYear,
+          is_active: true
+        });
+        
+        if (error) {
+            console.error('Error adding exam:', error);
+            alert('Failed to add exam: ' + error.message);
+        } else {
+          setShowAddExam(false);
+          setExamName('');
+          fetchExams();
+        }
+    } catch (e) {
+        console.error('Unexpected error:', e);
+        alert('An unexpected error occurred');
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const handleAddSubject = async () => {
