@@ -111,20 +111,34 @@ const BefaqResultEngine: React.FC<BefaqResultEngineProps> = ({ lang, madrasah, o
   };
 
   const handleAddSubject = async () => {
-    if (!selectedExam || !subName) return;
-    setIsSaving(true);
-    const { error } = await supabase.from('befaq_subjects').insert({
-      exam_id: selectedExam.id,
-      subject_name: subName,
-      total_marks: parseInt(totalMarks),
-      passing_marks: parseInt(passingMarks)
-    });
-    if (!error) {
-      setShowAddSubject(false);
-      setSubName('');
-      fetchSubjects(selectedExam.id);
+    if (!selectedExam || !subName) {
+        alert('Please fill all fields');
+        return;
     }
-    setIsSaving(false);
+    setIsSaving(true);
+    try {
+        const { error } = await supabase.from('befaq_subjects').insert({
+          exam_id: selectedExam.id,
+          class_name: selectedExam.classes?.class_name || 'Unknown',
+          subject_name: subName,
+          total_marks: parseInt(totalMarks),
+          passing_marks: parseInt(passingMarks)
+        });
+        
+        if (error) {
+            console.error('Error adding subject:', error);
+            alert('Failed to add subject: ' + error.message);
+        } else {
+          setShowAddSubject(false);
+          setSubName('');
+          fetchSubjects(selectedExam.id);
+        }
+    } catch (e) {
+        console.error('Unexpected error:', e);
+        alert('An unexpected error occurred');
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const handleSaveMarks = async () => {
