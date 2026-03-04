@@ -75,6 +75,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   const [editUiMode, setEditUiMode] = useState<'madrasah' | 'school'>('madrasah');
   const [editTheme, setEditTheme] = useState('default');
   const [editTemplateSet, setEditTemplateSet] = useState('default');
+  const [editInstitutionType, setEditInstitutionType] = useState<'madrasah' | 'school' | 'kindergarten' | 'nurani' | 'system'>('madrasah');
 
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const [isRefreshingStats, setIsRefreshingStats] = useState(false);
@@ -221,6 +222,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     setEditUiMode(user.config_json?.ui_mode || 'madrasah');
     setEditTheme(user.theme || 'default');
     setEditTemplateSet(user.config_json?.template_set || 'default');
+    setEditInstitutionType(user.institution_type || 'madrasah');
     
     setView('details');
     
@@ -255,12 +257,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
         reve_api_key: editReveApiKey.trim() || null,
         reve_secret_key: editReveSecretKey.trim() || null,
         reve_caller_id: editReveCallerId.trim() || null,
-        institution_type: selectedUser.institution_type,
+        institution_type: editInstitutionType,
         subscription_end: editSubscriptionEnd || null,
         status: editStatus,
         theme: editTheme,
         config_json: {
-          ...selectedUser.config_json,
+          ...(selectedUser.config_json || {}),
           modules: editModules,
           ui_mode: editUiMode,
           template_set: editTemplateSet
