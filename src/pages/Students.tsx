@@ -3,8 +3,9 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, Plus, Search, CheckCircle2, MessageSquare, X, BookOpen, ChevronDown, Check, PhoneCall, Smartphone, Loader2, ListChecks, MessageCircle, Phone, AlertCircle, AlertTriangle, Zap } from 'lucide-react';
 import { supabase, offlineApi, smsApi } from 'supabase';
-import { Class, Student, Language, Teacher } from 'types';
+import { Class, Student, Language, Teacher, Institution } from 'types';
 import { t } from 'translations';
+
 
 interface StudentsProps {
   selectedClass: Class;
@@ -18,12 +19,13 @@ interface StudentsProps {
   canSendSMS?: boolean;
   teacher?: Teacher | null;
   institutionId?: string;
+  madrasah?: Institution | null;
   onNavigateToWallet?: () => void;
 }
 
 const PAGE_SIZE = 50;
 
-const Students: React.FC<StudentsProps> = ({ selectedClass, onStudentClick, onAddClick, onBack, lang, dataVersion, triggerRefresh, canAdd, canSendSMS, teacher, institutionId, onNavigateToWallet }) => {
+const Students: React.FC<StudentsProps> = ({ selectedClass, onStudentClick, onAddClick, onBack, lang, dataVersion, triggerRefresh, canAdd, canSendSMS, teacher, institutionId, madrasah, onNavigateToWallet }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -133,6 +135,7 @@ const Students: React.FC<StudentsProps> = ({ selectedClass, onStudentClick, onAd
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             <button onClick={onBack} className="w-10 h-10 bg-blue-50 rounded-2xl text-[#2563EB] border border-blue-100 shadow-sm flex items-center justify-center active:scale-95"><ArrowLeft size={22} strokeWidth={3} /></button>
+
             <div className="min-w-0">
               <h1 className="text-[17px] font-black text-[#1E293B] truncate font-noto leading-tight">{selectedClass.class_name}</h1>
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{students.length} Loaded</p>
@@ -142,21 +145,22 @@ const Students: React.FC<StudentsProps> = ({ selectedClass, onStudentClick, onAd
           <div className="flex items-center gap-2">
             {isSelectionMode && (
               <button onClick={toggleSelectAll} className="h-10 px-3.5 rounded-2xl bg-blue-50 text-[#2563EB] border border-blue-100 font-black text-[10px] uppercase shadow-sm active:scale-95">
-                {selectedIds.size === students.length ? t('clear', lang) : t('all', lang)}
+                {selectedIds.size === students.length ? t('clear', lang, madrasah?.institution_type) : t('all', lang, madrasah?.institution_type)}
               </button>
             )}
             <button onClick={() => { setIsSelectionMode(!isSelectionMode); setSelectedIds(new Set()); }} className={`w-10 h-10 rounded-2xl border flex items-center justify-center transition-all active:scale-95 ${isSelectionMode ? 'bg-[#2563EB] text-white border-blue-200 shadow-premium' : 'bg-blue-50 text-[#2563EB] border-blue-100 shadow-sm'}`}>
               {isSelectionMode ? <X size={18} /> : <CheckCircle2 size={18} />}
             </button>
             {!isSelectionMode && canAdd && (
-              <button onClick={onAddClick} className="bg-[#2563EB] text-white px-4 py-2.5 rounded-2xl text-[11px] font-black shadow-premium active:scale-95 transition-all flex items-center gap-2"><Plus size={14} /> {t('add_student', lang)}</button>
+              <button onClick={onAddClick} className="bg-[#2563EB] text-white px-4 py-2.5 rounded-2xl text-[11px] font-black shadow-premium active:scale-95 transition-all flex items-center gap-2"><Plus size={14} /> {t('add_student', lang, madrasah?.institution_type)}</button>
             )}
           </div>
         </div>
 
+
         <div className="relative">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[#2563EB]" size={18} />
-          <input type="text" placeholder={t('search_placeholder', lang)}
+          <input type="text" placeholder={t('search_placeholder', lang, madrasah?.institution_type)}
             className="w-full pl-12 pr-6 py-3.5 bg-white rounded-[1.2rem] outline-none text-[#1E293B] font-black text-sm shadow-bubble border border-slate-100"
             value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
         </div>

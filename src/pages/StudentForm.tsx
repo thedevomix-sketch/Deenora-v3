@@ -49,9 +49,10 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultCla
     }
   };
 
+
   const getSelectedClassName = () => {
     const cls = classes.find(c => c.id === classId);
-    return cls ? cls.class_name : t('class_choose', lang);
+    return cls ? cls.class_name : t('class_choose', lang, madrasah?.institution_type);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,7 +65,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultCla
     if (phone.length < 10 || phone.length > 15) {
       setErrorModal({ 
         show: true, 
-        message: t('invalid_phone', lang)
+        message: t('invalid_phone', lang, madrasah?.institution_type)
       });
       return;
     }
@@ -96,7 +97,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultCla
     } catch (err: any) { 
       let msg = err.message;
       if (err.code === '23505') {
-        msg = t('duplicate_roll', lang);
+        msg = t('duplicate_roll', lang, madrasah?.institution_type);
       }
       setErrorModal({ show: true, message: msg });
     } finally { setLoading(false); }
@@ -114,7 +115,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultCla
           <ArrowLeft size={24} strokeWidth={3} />
         </button>
         <h1 className="text-xl font-black text-white font-noto drop-shadow-md truncate">
-          {title || (isEditing ? t('edit_student', lang) : t('add_student', lang))}
+          {title || (isEditing ? t('edit_student', lang, madrasah?.institution_type) : t('add_student', lang, madrasah?.institution_type))}
         </h1>
       </div>
 
@@ -122,18 +123,18 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultCla
         <div className="bg-white/95 backdrop-blur-xl p-8 rounded-[3rem] border-2 border-[#8D30F4]/5 shadow-2xl space-y-8">
           <div className="space-y-6">
              <div className="space-y-2">
-               <label className="flex items-center gap-2 text-[10px] font-black text-[#4B168A] uppercase tracking-widest px-2"><UserIcon size={14} className="text-[#8D30F4]" /> {t('student_name', lang)}</label>
+               <label className="flex items-center gap-2 text-[10px] font-black text-[#4B168A] uppercase tracking-widest px-2"><UserIcon size={14} className="text-[#8D30F4]" /> {t('student_name', lang, madrasah?.institution_type)}</label>
                <input type="text" required className="w-full h-[64px] px-6 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] outline-none text-[#2D3142] font-black text-lg focus:border-[#8D30F4]/30 focus:bg-white transition-all shadow-inner" value={name} onChange={(e) => setName(e.target.value)} />
              </div>
 
              <div className="space-y-2">
-               <label className="flex items-center gap-2 text-[10px] font-black text-[#4B168A] uppercase tracking-widest px-2"><UserCheck size={14} className="text-[#8D30F4]" /> {t('guardian_name', lang)}</label>
+               <label className="flex items-center gap-2 text-[10px] font-black text-[#4B168A] uppercase tracking-widest px-2"><UserCheck size={14} className="text-[#8D30F4]" /> {t('guardian_name', lang, madrasah?.institution_type)}</label>
                <input type="text" className="w-full h-[64px] px-6 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] outline-none text-[#2D3142] font-black text-lg focus:border-[#8D30F4]/30 focus:bg-white transition-all shadow-inner" value={guardianName} onChange={(e) => setGuardianName(e.target.value)} />
              </div>
              
              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-[10px] font-black text-[#4B168A] uppercase tracking-widest px-2"><Hash size={14} className="text-[#8D30F4]" /> {t('roll', lang)}</label>
+                  <label className="flex items-center gap-2 text-[10px] font-black text-[#4B168A] uppercase tracking-widest px-2"><Hash size={14} className="text-[#8D30F4]" /> {t('roll', lang, madrasah?.institution_type)}</label>
                   <input 
                     type="number" 
                     className="w-full h-[64px] px-6 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] text-[#2D3142] font-black text-xl outline-none text-center focus:border-[#8D30F4]/30 focus:bg-white transition-all shadow-inner" 
@@ -142,7 +143,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultCla
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-[10px] font-black text-[#4B168A] uppercase tracking-widest px-2"><List size={14} className="text-[#8D30F4]" /> {t('classes', lang)}</label>
+                  <label className="flex items-center gap-2 text-[10px] font-black text-[#4B168A] uppercase tracking-widest px-2"><List size={14} className="text-[#8D30F4]" /> {t('classes', lang, madrasah?.institution_type)}</label>
                   <div 
                     onClick={() => setShowClassModal(true)} 
                     className="w-full h-[64px] px-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all shadow-inner"
@@ -155,11 +156,11 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultCla
 
              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-[10px] font-black text-[#4B168A] uppercase tracking-widest px-2"><Phone size={14} className="text-[#8D30F4]" /> {t('phone_primary_wa', lang)}</label>
+                  <label className="flex items-center gap-2 text-[10px] font-black text-[#4B168A] uppercase tracking-widest px-2"><Phone size={14} className="text-[#8D30F4]" /> {t('phone_primary_wa', lang, madrasah?.institution_type)}</label>
                   <input type="tel" required className="w-full h-[64px] px-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] text-[#2D3142] font-black text-sm outline-none focus:border-[#8D30F4]/30 focus:bg-white transition-all shadow-inner" value={phone} onChange={(e) => handlePhoneChange(e.target.value, setPhone)} placeholder="Max 15 digits" />
                 </div>
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-[10px] font-black text-[#4B168A] uppercase tracking-widest px-2"><Phone size={14} className="text-[#8D30F4]" /> {t('phone_secondary_15', lang)}</label>
+                  <label className="flex items-center gap-2 text-[10px] font-black text-[#4B168A] uppercase tracking-widest px-2"><Phone size={14} className="text-[#8D30F4]" /> {t('phone_secondary_15', lang, madrasah?.institution_type)}</label>
                   <input type="tel" className="w-full h-[64px] px-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] text-[#2D3142] font-black text-sm outline-none focus:border-[#8D30F4]/30 focus:bg-white transition-all shadow-inner" value={phone2} onChange={(e) => handlePhoneChange(e.target.value, setPhone2)} placeholder="Max 15 digits" />
                 </div>
              </div>
@@ -172,7 +173,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultCla
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shadow-inner group-active:scale-90 transition-transform">
                 <Save size={24} strokeWidth={2.5} />
               </div>
-              <span className="drop-shadow-md">{t('save', lang)}</span>
+              <span className="drop-shadow-md">{t('save', lang, madrasah?.institution_type)}</span>
             </>
           )}
         </button>
@@ -188,7 +189,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, madrasah, defaultCla
                   <BookOpen size={32} />
                </div>
                <div>
-                  <h2 className="text-xl font-black text-[#2E0B5E] font-noto tracking-tight">{t('select_class', lang)}</h2>
+                  <h2 className="text-xl font-black text-[#2E0B5E] font-noto tracking-tight">{t('select_class', lang, madrasah?.institution_type)}</h2>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Select a class</p>
                </div>
             </div>

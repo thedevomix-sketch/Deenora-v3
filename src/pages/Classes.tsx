@@ -131,11 +131,12 @@ const Classes: React.FC<ClassesProps> = ({ onClassClick, lang, madrasah, dataVer
   return (
     <>
       <div className="space-y-6 animate-in slide-in-from-right-4 duration-500 pb-20">
+
         <div className="flex items-center justify-between px-2">
-          <h1 className="text-xl font-noto font-black text-[#1E293B]">{t('classes_title', lang)}</h1>
+          <h1 className="text-xl font-noto font-black text-[#1E293B]">{t('classes_title', lang, madrasah?.institution_type)}</h1>
           {!readOnly && (
             <button onClick={() => { setNewClassName(''); setNewSortOrder(''); setEditingClass(null); setShowModal(true); }} className="bg-[#2563EB] text-white px-5 py-3 rounded-2xl text-[12px] font-black flex items-center gap-2 active:scale-95 transition-all border border-blue-100 shadow-premium">
-              <Plus size={16} strokeWidth={4} /> {t('new_class', lang)}
+              <Plus size={16} strokeWidth={4} /> {t('new_class', lang, madrasah?.institution_type)}
             </button>
           )}
         </div>
@@ -155,7 +156,7 @@ const Classes: React.FC<ClassesProps> = ({ onClassClick, lang, madrasah, dataVer
                   </div>
                   <div className="flex items-center gap-1.5 mt-1">
                     <Users size={12} className="text-[#2563EB]/60" />
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">{cls.student_count || 0} {t('students_count', lang)}</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">{cls.student_count || 0} {t('students_count', lang, madrasah?.institution_type)}</p>
                   </div>
                 </div>
               </div>
@@ -184,13 +185,14 @@ const Classes: React.FC<ClassesProps> = ({ onClassClick, lang, madrasah, dataVer
           <div className="bg-white w-full max-w-sm rounded-[3.5rem] p-10 shadow-bubble border border-slate-100 relative animate-in zoom-in-95 duration-300">
             <button onClick={() => setShowModal(false)} className="absolute top-10 right-10 text-slate-300 hover:text-[#2563EB] transition-all"><X size={26} strokeWidth={3} /></button>
             
+
             <div className="flex items-center gap-5 mb-8">
                <div className="w-16 h-16 bg-blue-50 rounded-[1.8rem] flex items-center justify-center text-[#2563EB] shrink-0 border border-blue-100 shadow-inner">
                   <BookOpen size={32} />
                </div>
                <div>
                   <h2 className="text-xl font-black text-[#1E3A8A] font-noto tracking-tight">
-                    {editingClass ? t('edit_class', lang) : t('new_class', lang)}
+                    {editingClass ? t('edit_class', lang, madrasah?.institution_type) : t('new_class', lang, madrasah?.institution_type)}
                   </h2>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Class Information</p>
                </div>
@@ -198,7 +200,7 @@ const Classes: React.FC<ClassesProps> = ({ onClassClick, lang, madrasah, dataVer
 
             <div className="space-y-6">
               <div className="space-y-2.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">{t('class_name_label', lang)}</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">{t('class_name_label', lang, madrasah?.institution_type)}</label>
                 <input 
                   type="text" 
                   autoFocus

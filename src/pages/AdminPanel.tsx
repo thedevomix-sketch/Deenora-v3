@@ -809,12 +809,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Override Sender ID</label>
                                <input type="text" className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm" value={editReveCallerId} onChange={(e) => setEditReveCallerId(e.target.value)} placeholder="e.g. 12345" />
                             </div>
+
                             <div className="space-y-1.5">
                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Institution Type</label>
                                <select 
                                  className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
-                                 value={selectedUser.institution_type || 'madrasah'}
-                                 onChange={(e) => setSelectedUser({...selectedUser, institution_type: e.target.value as any})}
+                                 value={editInstitutionType}
+                                 onChange={(e) => setEditInstitutionType(e.target.value as any)}
                                >
                                  <option value="madrasah">Madrasah</option>
                                  <option value="school">School</option>

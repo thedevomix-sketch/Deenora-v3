@@ -91,25 +91,26 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
       <div className="grid grid-cols-2 gap-3 px-1">
+
         <button onClick={onNavigateToClasses} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 active:scale-95 transition-all">
            <div className="w-10 h-10 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><Users size={20} /></div>
            <h4 className="text-xl font-black text-[#1E3A8A]">{loadingStats ? '...' : stats.totalStudents}</h4>
-           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('students', lang)}</p>
+           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('students', lang, madrasah?.institution_type)}</p>
         </button>
         <button onClick={onNavigateToClasses} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-75 active:scale-95 transition-all">
            <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><BookOpen size={20} /></div>
            <h4 className="text-xl font-black text-[#1E3A8A]">{loadingStats ? '...' : stats.totalClasses}</h4>
-           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('classes', lang)}</p>
+           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('classes', lang, madrasah?.institution_type)}</p>
         </button>
         <button onClick={onNavigateToTeachers} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-100 active:scale-95 transition-all">
            <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><GraduationCap size={20} /></div>
            <h4 className="text-xl font-black text-[#1E3A8A]">{loadingStats ? '...' : stats.totalTeachers}</h4>
-           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('teachers', lang)}</p>
+           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('teachers', lang, madrasah?.institution_type)}</p>
         </button>
         <button onClick={onNavigateToWallet} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-150 active:scale-95 transition-all">
            <div className="w-10 h-10 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><Zap size={20} /></div>
            <h4 className="text-xl font-black text-[#1E3A8A]">{loadingStats ? '...' : stats.smsBalance}</h4>
-           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('wallet', lang)}</p>
+           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('wallet', lang, madrasah?.institution_type)}</p>
         </button>
         {modules.attendance && (
           <button onClick={onNavigateToAttendance} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-200 active:scale-95 transition-all col-span-2">

@@ -326,6 +326,127 @@ export const translations = {
   }
 };
 
-export const t = (key: keyof typeof translations.bn, lang: Language) => {
-  return translations[lang][key] || key;
+
+export const overrides: Record<string, any> = {
+  madrasah: {
+    bn: {
+      classes: 'জামাত ও তালিব',
+      classes_title: 'জামাত সমূহ',
+      students: 'তালিব',
+      teachers: 'উস্তাদ',
+      class_name_label: 'জামাতের নাম',
+      new_class: 'নতুন জামাত',
+      edit_class: 'জামাত পরিবর্তন',
+      no_classes: 'কোনো জামাত খুঁজে পাওয়া যায়নি',
+      first_class: 'প্রথম জামাতটি যোগ করুন',
+      students_count: 'জন তালিব',
+      add_student: 'নতুন তালিব',
+      edit_student: 'তালিবের তথ্য সংশোধন',
+      no_students: 'এই জামাতে কোনো তালিব পাওয়া যায়নি',
+      student_info: 'তালিবের তথ্য',
+      student_name: 'তালিবের নাম',
+      select_class: 'জামাত সিলেক্ট করুন',
+      class_select: 'জামাত নির্বাচন করুন',
+      class_choose: 'জামাত বেছে নিন',
+      menu_students: 'তালিব',
+      menu_attendance: 'হাজিরা',
+      menu_exams: 'পরীক্ষা',
+      menu_accounting: 'হিসাব',
+      menu_sms: 'এসএমএস',
+    },
+    en: {
+      classes: 'Jamaat & Talib',
+      classes_title: 'Jamaats',
+      students: 'Talib',
+      teachers: 'Ustad',
+      class_name_label: 'Jamaat Name',
+      new_class: 'New Jamaat',
+      edit_class: 'Edit Jamaat',
+      no_classes: 'No Jamaats found',
+      first_class: 'Add the first Jamaat',
+      students_count: 'Talibs',
+      add_student: 'Add Talib',
+      edit_student: 'Edit Talib',
+      no_students: 'No Talibs found in this Jamaat',
+      student_info: 'Talib Info',
+      student_name: 'Talib Name',
+      select_class: 'Select Jamaat',
+      class_select: 'Select Jamaat',
+      class_choose: 'Choose a Jamaat',
+      menu_students: 'Talibs',
+      menu_attendance: 'Attendance',
+      menu_exams: 'Exams',
+      menu_accounting: 'Accounting',
+      menu_sms: 'SMS',
+    }
+  },
+  school: {
+    bn: {
+      classes: 'শ্রেণি ও শিক্ষার্থী',
+      classes_title: 'শ্রেণি সমূহ',
+      students: 'শিক্ষার্থী',
+      teachers: 'শিক্ষক',
+      class_name_label: 'শ্রেণির নাম',
+      new_class: 'নতুন শ্রেণি',
+      edit_class: 'শ্রেণি পরিবর্তন',
+      no_classes: 'কোনো শ্রেণি খুঁজে পাওয়া যায়নি',
+      first_class: 'প্রথম শ্রেণিটি যোগ করুন',
+      students_count: 'জন শিক্ষার্থী',
+      add_student: 'নতুন শিক্ষার্থী',
+      edit_student: 'শিক্ষার্থীর তথ্য সংশোধন',
+      no_students: 'এই শ্রেণিতে কোনো শিক্ষার্থী পাওয়া যায়নি',
+      student_info: 'শিক্ষার্থীর তথ্য',
+      student_name: 'শিক্ষার্থীর নাম',
+      select_class: 'শ্রেণি সিলেক্ট করুন',
+      class_select: 'শ্রেণি নির্বাচন করুন',
+      class_choose: 'শ্রেণি বেছে নিন',
+      menu_students: 'শিক্ষার্থী',
+      menu_attendance: 'হাজিরা',
+      menu_exams: 'পরীক্ষা',
+      menu_accounting: 'হিসাব',
+      menu_sms: 'এসএমএস',
+    },
+    en: {
+      classes: 'Classes & Students',
+      classes_title: 'Classes',
+      students: 'Students',
+      teachers: 'Teachers',
+      class_name_label: 'Class Name',
+      new_class: 'New Class',
+      edit_class: 'Edit Class',
+      no_classes: 'No classes found',
+      first_class: 'Add the first class',
+      students_count: 'Students',
+      add_student: 'Add Student',
+      edit_student: 'Edit Student',
+      no_students: 'No students found in this class',
+      student_info: 'Student Info',
+      student_name: 'Student Name',
+      select_class: 'Select Class',
+      class_select: 'Select Class',
+      class_choose: 'Choose a class',
+      menu_students: 'Students',
+      menu_attendance: 'Attendance',
+      menu_exams: 'Exams',
+      menu_accounting: 'Accounting',
+      menu_sms: 'SMS',
+    }
+  }
 };
+
+export const t = (key: keyof typeof translations.bn, lang: Language, type?: string) => {
+  const defaultText = translations[lang][key] || key;
+  if (!type) return defaultText;
+  
+  // Map types to override keys
+  let overrideType = type;
+  if (type === 'nurani') overrideType = 'madrasah';
+  if (type === 'kindergarten') overrideType = 'school';
+  
+  if (overrides[overrideType] && overrides[overrideType][lang] && overrides[overrideType][lang][key]) {
+    return overrides[overrideType][lang][key];
+  }
+  
+  return defaultText;
+};
+
