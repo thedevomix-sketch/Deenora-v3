@@ -4,6 +4,7 @@ import { Institution, Class, Student, BefaqExam, BefaqSubject, Language, UserRol
 import { GraduationCap, Plus, BookOpen, Trophy, Save, X, Loader2, ArrowLeft, Calendar, LayoutGrid, Download, CreditCard } from 'lucide-react';
 import { t } from 'translations';
 import { sortMadrasahClasses } from '../../../../pages/Classes';
+import FinalResults from './FinalResults';
 
 interface BefaqResultEngineProps {
   lang: Language;
@@ -13,7 +14,7 @@ interface BefaqResultEngineProps {
 }
 
 const BefaqResultEngine: React.FC<BefaqResultEngineProps> = ({ lang, madrasah, onBack, role }) => {
-  const [activeTab, setActiveTab] = useState<'exams' | 'analytics'>('exams');
+  const [activeTab, setActiveTab] = useState<'exams' | 'analytics' | 'final-results'>('exams');
   const [view, setView] = useState<'list' | 'subjects' | 'marks' | 'report'>('list');
   const [exams, setExams] = useState<BefaqExam[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -150,21 +151,32 @@ const BefaqResultEngine: React.FC<BefaqResultEngineProps> = ({ lang, madrasah, o
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+      {activeTab !== 'final-results' && (
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-3">
           <button onClick={view === 'list' ? onBack : () => setView('list')} className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 border border-emerald-100">
             <ArrowLeft size={20}/>
           </button>
           <h1 className="text-xl font-black text-[#1E293B] font-noto">
-            {view === 'list' ? 'বেফাক ফলাফল' : selectedExam?.exam_name}
+            {view === 'list' ? 'বেফাক পরীক্ষা' : selectedExam?.exam_name}
           </h1>
         </div>
         {view === 'list' && role === 'madrasah_admin' && (
-            <button onClick={() => setShowAddExam(true)} className="w-10 h-10 bg-emerald-600 text-white rounded-xl shadow-premium flex items-center justify-center active:scale-95 transition-all"><Plus size={20}/></button>
+            <div className="flex gap-2">
+                <button onClick={() => setActiveTab('final-results')} className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center border border-purple-100 shadow-sm active:scale-95 transition-all" title="চূড়ান্ত ফলাফল">
+                  <Trophy size={20} />
+                </button>
+                <button onClick={() => setShowAddExam(true)} className="w-10 h-10 bg-emerald-600 text-white rounded-xl shadow-premium flex items-center justify-center active:scale-95 transition-all"><Plus size={20}/></button>
+            </div>
         )}
       </div>
+      )}
 
-      {view === 'list' && (
+      {activeTab === 'final-results' && (
+          <FinalResults lang={lang} madrasah={madrasah} role={role} onBack={() => setActiveTab('exams')} />
+      )}
+
+      {activeTab === 'exams' && view === 'list' && (
         <div className="space-y-4">
           {loading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-emerald-600" /></div> : exams.map(exam => (
             <div key={exam.id} className="bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-bubble space-y-4">
@@ -190,7 +202,7 @@ const BefaqResultEngine: React.FC<BefaqResultEngineProps> = ({ lang, madrasah, o
         </div>
       )}
 
-      {view === 'subjects' && (
+      {activeTab === 'exams' && view === 'subjects' && (
         <div className="space-y-4">
            <button onClick={() => setShowAddSubject(true)} className="w-full py-5 bg-white rounded-[2.2rem] text-emerald-600 font-black flex items-center justify-center gap-3 shadow-bubble border border-slate-100 active:scale-95 transition-all">
               <Plus size={24} strokeWidth={3} /> কিতাব যোগ করুন
@@ -212,7 +224,7 @@ const BefaqResultEngine: React.FC<BefaqResultEngineProps> = ({ lang, madrasah, o
         </div>
       )}
 
-      {view === 'marks' && (
+      {activeTab === 'exams' && view === 'marks' && (
         <div className="space-y-4">
             <div className="bg-white p-5 rounded-[2.5rem] shadow-bubble border border-slate-100 overflow-x-auto no-scrollbar">
                 <table className="w-full text-left">
