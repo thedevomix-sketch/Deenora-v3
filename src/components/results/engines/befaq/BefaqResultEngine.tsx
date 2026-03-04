@@ -15,7 +15,7 @@ interface BefaqResultEngineProps {
 
 const BefaqResultEngine: React.FC<BefaqResultEngineProps> = ({ lang, madrasah, onBack, role }) => {
   const [activeTab, setActiveTab] = useState<'exams' | 'analytics' | 'final-results'>('exams');
-  const [view, setView] = useState<'list' | 'subjects' | 'marks' | 'report'>('list');
+  const [view, setView] = useState<'list' | 'subjects' | 'marks' | 'report' | 'rank'>('list');
   const [exams, setExams] = useState<BefaqExam[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedExam, setSelectedExam] = useState<BefaqExam | null>(null);
@@ -225,7 +225,7 @@ const BefaqResultEngine: React.FC<BefaqResultEngineProps> = ({ lang, madrasah, o
                 <div className="grid grid-cols-3 gap-2">
                     <button onClick={() => { setSelectedExam(exam); setView('subjects'); fetchSubjects(exam.id); }} className="py-2.5 bg-slate-50 text-slate-500 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-100 active:scale-95 transition-all">{t('subject', lang)}</button>
                     <button onClick={() => { setSelectedExam(exam); setView('marks'); fetchSubjects(exam.id); fetchMarkEntryData(exam.id, exam.marhala_id); }} className="py-2.5 bg-emerald-50 text-emerald-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-100 active:scale-95 transition-all">{t('enter_marks', lang)}</button>
-                    <button className="py-2.5 bg-emerald-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-premium active:scale-95 transition-all">{t('rank', lang)}</button>
+                    <button onClick={() => { setSelectedExam(exam); setView('rank'); fetchSubjects(exam.id); fetchMarkEntryData(exam.id, exam.marhala_id); }} className="py-2.5 bg-emerald-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-premium active:scale-95 transition-all">{t('rank', lang)}</button>
                 </div>
             </div>
           ))}
@@ -314,6 +314,56 @@ const BefaqResultEngine: React.FC<BefaqResultEngineProps> = ({ lang, madrasah, o
             <button onClick={handleSaveMarks} disabled={isSaving} className="w-full h-16 bg-emerald-600 text-white font-black rounded-full shadow-premium flex items-center justify-center gap-3 text-lg active:scale-95 transition-all">
                 {isSaving ? <Loader2 className="animate-spin" /> : <><Save size={24}/> নম্বর সংরক্ষণ করুন</>}
             </button>
+        </div>
+      )}
+
+      {activeTab === 'exams' && view === 'rank' && (
+        <div className="space-y-4">
+            <div className="bg-white p-5 rounded-[2.5rem] shadow-bubble border border-slate-100 overflow-hidden">
+                <table className="w-full text-left">
+                    <thead>
+                        <tr className="border-b border-slate-50">
+                            <th className="py-4 text-[10px] font-black text-slate-400 uppercase text-center w-16">মেধা</th>
+                            <th className="py-4 text-[10px] font-black text-slate-400 uppercase pl-4">নাম</th>
+                            <th className="py-4 text-[10px] font-black text-slate-400 uppercase text-center">রোল</th>
+                            <th className="py-4 text-[10px] font-black text-emerald-400 uppercase text-center">মোট নম্বর</th>
+                            <th className="py-4 text-[10px] font-black text-purple-400 uppercase text-center">বিভাগ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {students.map(std => {
+                            const stdMarks = marksData[std.id] || {};
+                            const totalObtained = Object.values(stdMarks).reduce((sum: number, m: any) => sum + (parseFloat(m) || 0), 0) as number;
+                            const totalPossible = subjects.reduce((sum, s) => sum + s.total_marks, 0);
+                            
+                            // Check if failed in any subject
+                            const failed = subjects.some(sub => {
+                                const marks = parseFloat(stdMarks[sub.id] || '0');
+                                return marks < sub.passing_marks;
+                            });
+
+                            return {
+                                ...std,
+                                totalObtained,
+                                division: failed ? 'রাসিব' : getDivision(totalObtained, totalPossible),
+                                failed
+                            } as Student & { totalObtained: number; division: string; failed: boolean };
+                        }).sort((a, b) => b.totalObtained - a.totalObtained).map((std, index) => (
+                            <tr key={std.id} className="border-b border-slate-50 last:border-0">
+                                <td className="py-4 px-2">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black mx-auto ${index < 3 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-50 text-slate-500'}`}>
+                                        {index + 1}
+                                    </div>
+                                </td>
+                                <td className="py-4 pl-4 font-black text-[#1E3A8A] text-xs font-noto">{std.student_name}</td>
+                                <td className="py-4 text-center font-black text-slate-400 text-xs">{std.roll}</td>
+                                <td className="py-4 text-center font-black text-emerald-600 text-xs">{std.totalObtained}</td>
+                                <td className={`py-4 text-center font-black text-xs ${std.failed ? 'text-red-500' : 'text-purple-600'}`}>{std.division}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
       )}
 
