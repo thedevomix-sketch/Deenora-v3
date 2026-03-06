@@ -28,6 +28,8 @@ export interface Institution {
     fee_structure: 'monthly' | 'session';
     ui_mode: 'madrasah' | 'school';
     template_set?: string;
+    fee_engine?: 'school' | 'qawmi' | 'kindergarten' | 'simple';
+    accounting_mode?: 'standard_accounting' | 'cashbook_only' | 'donation_based';
   };
   theme: string;
   status: 'active' | 'suspended' | 'trial';

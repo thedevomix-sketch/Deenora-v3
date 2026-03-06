@@ -81,6 +81,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   const [editAttendanceType, setEditAttendanceType] = useState<'daily' | 'period'>('daily');
   const [editFeeStructure, setEditFeeStructure] = useState<'monthly' | 'session'>('monthly');
   const [editInstitutionType, setEditInstitutionType] = useState<'madrasah' | 'school' | 'kindergarten' | 'nurani' | 'system'>('madrasah');
+  const [editFeeEngine, setEditFeeEngine] = useState<'school' | 'qawmi' | 'kindergarten' | 'simple'>('school');
+  const [editAccountingMode, setEditAccountingMode] = useState<'standard_accounting' | 'cashbook_only' | 'donation_based'>('standard_accounting');
 
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const [isRefreshingStats, setIsRefreshingStats] = useState(false);
@@ -232,6 +234,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     setEditAttendanceType(user.config_json?.attendance_type || 'daily');
     setEditFeeStructure(user.config_json?.fee_structure || 'monthly');
     setEditInstitutionType(user.institution_type || 'madrasah');
+    setEditFeeEngine(user.config_json?.fee_engine || 'school');
+    setEditAccountingMode(user.config_json?.accounting_mode || 'standard_accounting');
     
     setView('details');
     
@@ -278,7 +282,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
           result_engine: editResultEngine,
           result_system: editResultSystem,
           attendance_type: editAttendanceType,
-          fee_structure: editFeeStructure
+          fee_structure: editFeeStructure,
+          fee_engine: editFeeEngine,
+          accounting_mode: editAccountingMode
         }
       }).eq('id', selectedUser.id);
       
@@ -951,6 +957,31 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                                >
                                  <option value="monthly">Monthly</option>
                                  <option value="session">Session Based</option>
+                               </select>
+                            </div>
+                            <div className="space-y-1.5">
+                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Fee Engine</label>
+                               <select 
+                                 className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
+                                 value={editFeeEngine}
+                                 onChange={(e) => setEditFeeEngine(e.target.value as any)}
+                               >
+                                 <option value="school">School (Standard)</option>
+                                 <option value="qawmi">Qawmi (Flexible)</option>
+                                 <option value="kindergarten">Kindergarten (Event)</option>
+                                 <option value="simple">Simple (Manual)</option>
+                               </select>
+                            </div>
+                            <div className="space-y-1.5">
+                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Accounting Mode</label>
+                               <select 
+                                 className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
+                                 value={editAccountingMode}
+                                 onChange={(e) => setEditAccountingMode(e.target.value as any)}
+                               >
+                                 <option value="standard_accounting">Standard Accounting</option>
+                                 <option value="cashbook_only">Cashbook Only</option>
+                                 <option value="donation_based">Donation Based</option>
                                </select>
                             </div>
                          </div>
