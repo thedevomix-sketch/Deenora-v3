@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from 'supabase';
 import { Language } from 'types';
 import { t } from 'translations';
-import { TrendingUp, TrendingDown, Award, AlertCircle, Loader2, User, ChevronRight, BarChart2, BookOpen, Users, ArrowUpRight, ArrowDownRight, Filter } from 'lucide-react';
+import { TrendingUp, TrendingDown, Award, AlertCircle, Loader2, User, ChevronRight, BarChart2, BookOpen, Users, ArrowUpRight, ArrowDownRight, Filter, Check } from 'lucide-react';
 import { isValidUUID } from 'utils/validation';
 
 interface SmartResultAnalyticsProps {
@@ -13,6 +13,7 @@ interface SmartResultAnalyticsProps {
 
 const SmartResultAnalytics: React.FC<SmartResultAnalyticsProps> = ({ institutionId, lang }) => {
   const [loading, setLoading] = useState(true);
+  const [showFilter, setShowFilter] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>('all');
   const [analytics, setAnalytics] = useState<{
@@ -214,20 +215,43 @@ const SmartResultAnalytics: React.FC<SmartResultAnalyticsProps> = ({ institution
     <div className="space-y-6 animate-in fade-in duration-500">
       
       {/* Filter */}
-      <div className="flex justify-end">
-        <div className="relative">
-            <select 
-                value={selectedClassId} 
-                onChange={(e) => setSelectedClassId(e.target.value)}
-                className="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2 pr-10 text-xs font-black text-slate-600 outline-none focus:border-[#2563EB] transition-all shadow-sm"
-            >
-                <option value="all">All Classes</option>
-                {classes.map(c => (
-                    <option key={c.id} value={c.id}>{c.class_name}</option>
-                ))}
-            </select>
-            <Filter size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
-        </div>
+      <div className="flex justify-end relative z-30">
+        <button 
+            onClick={() => setShowFilter(!showFilter)}
+            className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-black text-slate-600 shadow-sm hover:border-[#2563EB] transition-all active:scale-95"
+        >
+            <Filter size={14} className="text-slate-400" />
+            <span>{selectedClassId === 'all' ? 'All Classes' : classes.find(c => c.id === selectedClassId)?.class_name || 'Select Class'}</span>
+            <ChevronRight size={14} className={`text-slate-400 transition-transform duration-300 ${showFilter ? 'rotate-90' : ''}`} />
+        </button>
+
+        {showFilter && (
+            <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowFilter(false)}></div>
+                <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 animate-in zoom-in-95 origin-top-right">
+                    <button 
+                        onClick={() => { setSelectedClassId('all'); setShowFilter(false); }}
+                        className={`w-full text-left px-4 py-3 rounded-xl text-xs font-black transition-all flex items-center justify-between ${selectedClassId === 'all' ? 'bg-blue-50 text-[#2563EB]' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                        All Classes
+                        {selectedClassId === 'all' && <Check size={14} />}
+                    </button>
+                    <div className="h-px bg-slate-50 my-1"></div>
+                    <div className="max-h-60 overflow-y-auto space-y-1">
+                        {classes.map(c => (
+                            <button 
+                                key={c.id}
+                                onClick={() => { setSelectedClassId(c.id); setShowFilter(false); }}
+                                className={`w-full text-left px-4 py-3 rounded-xl text-xs font-black transition-all flex items-center justify-between ${selectedClassId === c.id ? 'bg-blue-50 text-[#2563EB]' : 'text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                {c.class_name}
+                                {selectedClassId === c.id && <Check size={14} />}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </>
+        )}
       </div>
 
       {/* Overall Stats */}

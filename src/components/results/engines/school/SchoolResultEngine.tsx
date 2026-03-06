@@ -347,6 +347,7 @@ const SchoolResultEngine: React.FC<SchoolResultEngineProps> = ({ lang, madrasah,
       </div>
       )}
 
+      {activeTab !== 'final-results' && (
       <div className="flex p-1.5 bg-slate-50 rounded-[1.5rem] border border-slate-100 overflow-x-auto no-scrollbar">
         <button onClick={() => setActiveTab('exams')} className={`flex-1 min-w-[85px] py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${activeTab === 'exams' ? 'bg-[#2563EB] text-white shadow-premium' : 'text-slate-400'}`}>
             {t('exams', lang)}
@@ -358,6 +359,7 @@ const SchoolResultEngine: React.FC<SchoolResultEngineProps> = ({ lang, madrasah,
             Analytics
         </button>
       </div>
+      )}
 
       {activeTab === 'analytics' && madrasah && (
           <SmartResultAnalytics institutionId={madrasah.id} lang={lang} />
