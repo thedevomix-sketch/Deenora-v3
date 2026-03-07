@@ -227,7 +227,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
       academic_year_promotion: false,
       ...(user.config_json?.modules || {})
     });
-    setEditSubscriptionEnd(user.subscription_end || '');
+
+    const createdAtDate = new Date(user.created_at);
+    const oneYearLater = new Date(createdAtDate);
+    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+    const defaultEndDate = oneYearLater.toISOString().split('T')[0];
+
+    setEditSubscriptionEnd(user.subscription_end || defaultEndDate);
     setEditStatus(user.status || 'active');
     setEditUiMode(user.config_json?.ui_mode || 'madrasah');
     setEditTheme(user.theme || 'default');
@@ -854,13 +860,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                       <div className="bg-slate-50 p-6 rounded-[2.5rem] space-y-6">
                          <div className="flex items-center justify-between px-1">
                             <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                               <Calendar size={14} className="text-[#2563EB]" /> Active Date
+                               <Calendar size={14} className="text-[#2563EB]" /> Active Date & End Date
                             </h4>
                          </div>
                          <div className="space-y-4">
-                            <div className="space-y-1.5">
-                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Active Date</label>
-                               <input type="date" className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm" value={editSubscriptionEnd} onChange={(e) => setEditSubscriptionEnd(e.target.value)} />
+                            <div className="grid grid-cols-2 gap-4">
+                               <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Active Date</label>
+                                  <input 
+                                    type="date" 
+                                    className="w-full h-12 bg-slate-100 border border-slate-200 rounded-xl px-4 font-black text-sm text-slate-500 cursor-not-allowed" 
+                                    value={selectedUser ? new Date(selectedUser.created_at).toISOString().split('T')[0] : ''} 
+                                    readOnly 
+                                  />
+                               </div>
+                               <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">End Date</label>
+                                  <input 
+                                    type="date" 
+                                    className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm" 
+                                    value={editSubscriptionEnd} 
+                                    onChange={(e) => setEditSubscriptionEnd(e.target.value)} 
+                                  />
+                               </div>
                             </div>
                             
                             <div className="grid grid-cols-2 gap-4">
