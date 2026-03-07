@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
 // Fix: Import icons from lucide-react instead of ../supabase
-import { Loader2, Search, ChevronRight, User as UserIcon, ShieldCheck, Database, Globe, CheckCircle, XCircle, CreditCard, Save, X, Settings, Smartphone, MessageSquare, Key, Shield, ArrowLeft, ArrowRight, Copy, Check, Calendar, Users, Layers, MonitorSmartphone, Server, BarChart3, TrendingUp, RefreshCcw, Clock, Hash, History as HistoryIcon, Zap, Activity, PieChart, Users2, CheckCircle2, AlertCircle, AlertTriangle, RefreshCw, Trash2, Sliders, ToggleLeft, ToggleRight, GraduationCap, Banknote, PhoneCall, Mic } from 'lucide-react';
+import { Loader2, Search, ChevronRight, User as UserIcon, ShieldCheck, Database, Globe, CheckCircle, XCircle, CreditCard, Save, X, Settings, Smartphone, MessageSquare, Key, Shield, ArrowLeft, ArrowRight, Copy, Check, Calendar, Users, Layers, MonitorSmartphone, Server, BarChart3, TrendingUp, RefreshCcw, Clock, Hash, History as HistoryIcon, Zap, Activity, PieChart, Users2, CheckCircle2, AlertCircle, AlertTriangle, RefreshCw, Trash2, Sliders, ToggleLeft, ToggleRight, GraduationCap, Banknote, PhoneCall, Mic, Upload } from 'lucide-react';
 import { supabase, smsApi } from 'supabase';
 import { Institution, Language, Transaction, AdminSMSStock } from 'types';
 
@@ -88,6 +88,46 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
       setStatusModal({ show: true, type: 'error', title: 'ত্রুটি', message: err.message });
     } finally {
       setRejectingVoiceId(null);
+    }
+  };
+
+  const [isUploadingToAwaj, setIsUploadingToAwaj] = useState(false);
+
+  const handleUploadToAwaj = async () => {
+    if (!approvingVoice) return;
+    setIsUploadingToAwaj(true);
+    try {
+      const awajResponse = await fetch('/api/awaj/voices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: approvingVoice.title,
+          file_url: approvingVoice.file_url
+        })
+      });
+
+      if (awajResponse.ok) {
+        const awajData = await awajResponse.json();
+        if (awajData.voice?.id || awajData.id) {
+          setProviderVoiceIdInput(awajData.voice?.id || awajData.id);
+          setStatusModal({
+            show: true,
+            type: 'success',
+            title: 'সফল',
+            message: 'Awaj Digital এ সফলভাবে আপলোড হয়েছে।'
+          });
+        } else {
+          throw new Error('No ID returned from Awaj Digital');
+        }
+      } else {
+        const errorData = await awajResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to upload to Awaj Digital');
+      }
+    } catch (err: any) {
+      console.error('Error uploading to Awaj:', err);
+      setStatusModal({ show: true, type: 'error', title: 'ত্রুটি', message: err.message });
+    } finally {
+      setIsUploadingToAwaj(false);
     }
   };
 
@@ -1323,15 +1363,26 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Provider Voice ID (Optional)</label>
-                <input 
-                  type="text" 
-                  className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20" 
-                  value={providerVoiceIdInput} 
-                  onChange={(e) => setProviderVoiceIdInput(e.target.value)} 
-                  placeholder="e.g. 12345 or voice_xyz"
-                />
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    className="flex-1 h-14 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20" 
+                    value={providerVoiceIdInput} 
+                    onChange={(e) => setProviderVoiceIdInput(e.target.value)} 
+                    placeholder="e.g. 12345 or voice_xyz"
+                  />
+                  <button
+                    onClick={handleUploadToAwaj}
+                    disabled={isUploadingToAwaj || !!providerVoiceIdInput}
+                    className="h-14 px-4 bg-blue-50 text-blue-600 font-bold rounded-2xl hover:bg-blue-100 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                    title="Upload to Awaj Digital"
+                  >
+                    {isUploadingToAwaj ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
+                    <span className="text-xs">Upload to Awaj</span>
+                  </button>
+                </div>
                 <p className="text-[10px] text-slate-400 px-2">
-                  Enter the ID from Awaj Digital panel if available. If left empty, it will use the existing ID or remain empty.
+                  Click "Upload to Awaj" to automatically send the voice and get the ID, or enter it manually.
                 </p>
               </div>
 

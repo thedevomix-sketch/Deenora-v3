@@ -330,42 +330,12 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
     if (!confirm('Are you sure you want to send this voice for approval?')) return;
     
     try {
-      let providerVoiceId = null;
-      let providerStatus = 'pending';
-
-      // Upload to Awaj Digital
-      try {
-        const awajResponse = await fetch('/api/awaj/voices', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: template.title,
-            file_url: template.file_url
-          })
-        });
-
-        if (awajResponse.ok) {
-          const awajData = await awajResponse.json();
-          // Check if we got an ID back
-          if (awajData.voice?.id || awajData.id) {
-            providerVoiceId = awajData.voice?.id || awajData.id;
-            // If Awaj returns success, it might be pending approval on their side too
-            // But let's assume if we get an ID, it's at least registered
-          }
-        } else {
-          console.warn('Failed to upload to Awaj Digital');
-        }
-      } catch (err) {
-        console.error('Error uploading to Awaj:', err);
-      }
-
       // Update database status to pending
       const { error } = await supabase
         .from('voice_templates')
         .update({
           admin_status: 'pending',
-          provider_status: providerStatus, // Set to pending or whatever logic applies
-          provider_voice_id: providerVoiceId
+          provider_status: 'pending'
         })
         .eq('id', template.id);
 
