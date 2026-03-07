@@ -2,8 +2,6 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import FormData from 'form-data';
-import fetch from 'node-fetch';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -56,23 +54,20 @@ async function startServer() {
       if (file_url) {
         // Download the file from file_url
         const fileRes = await fetch(file_url);
-        if (!fileRes.ok) throw new Error('Failed to download file from URL');
+        if (!fileRes.ok) throw new Error(`Failed to download file from URL: ${fileRes.status} ${fileRes.statusText}`);
         const fileBuffer = await fileRes.arrayBuffer();
         
-        // Use Node.js FormData equivalent or standard fetch FormData
+        // Use native fetch FormData
         const formData = new FormData();
-        formData.append('name', name);
-        formData.append('file', Buffer.from(fileBuffer), {
-          filename: 'voice.mp3',
-          contentType: 'audio/mpeg'
-        });
+        formData.append('name', name || 'Voice Upload');
+        formData.append('file', new Blob([fileBuffer], { type: 'audio/mpeg' }), 'voice.mp3');
 
         body = formData;
-        // Merge form-data headers (which include boundary) with our auth headers
-        headers = {
-          ...headers,
-          ...formData.getHeaders()
-        };
+        // Remove the application/json Content-Type
+        delete headers['Content-Type'];
+        delete headers['content-type'];
+        
+        // Native fetch will automatically set the Content-Type header with the correct boundary
       }
 
       const response = await fetch(`${AWAJ_BASE_URL}/voices`, {
@@ -83,9 +78,14 @@ async function startServer() {
       
       let data;
       try {
-        data = await response.json();
+        const textData = await response.text();
+        try {
+          data = JSON.parse(textData);
+        } catch (e) {
+          data = { message: textData || 'Unknown error from Awaj API' };
+        }
       } catch (e) {
-        data = { message: await response.text() };
+        data = { message: 'Failed to read response from Awaj API' };
       }
       
       if (!response.ok) {

@@ -121,18 +121,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
         }
       } else {
         // Response is already parsed or we need to parse it once
-        let errorMsg = 'Failed to upload to Awaj Digital';
+        let errorMsg = 'Unknown error occurred while uploading to Awaj Digital';
         try {
-          const errorData = await awajResponse.json();
-          errorMsg = errorData.message || errorData.error || errorMsg;
-        } catch (e) {
-          // If it's not JSON, try to get text
+          const textData = await awajResponse.text();
           try {
-            const textData = await awajResponse.text();
+            const errorData = JSON.parse(textData);
+            errorMsg = errorData.message || errorData.error || errorMsg;
+          } catch (e) {
             if (textData) errorMsg = textData;
-          } catch (e2) {}
+          }
+        } catch (e) {
+          console.error("Failed to read error response", e);
         }
-        throw new Error(errorMsg);
+        throw new Error(`Awaj API Error: ${errorMsg}`);
       }
     } catch (err: any) {
       console.error('Error uploading to Awaj:', err);
