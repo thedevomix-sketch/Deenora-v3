@@ -276,7 +276,8 @@ export type View =
   | 'attendance'
   | 'exams'
   | 'final-results'
-  | 'academic-year';
+  | 'academic-year'
+  | 'voice-broadcast';
 
 export interface AppState {
   currentView: View;

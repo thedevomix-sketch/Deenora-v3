@@ -18,6 +18,7 @@ import Accounting from 'pages/Accounting';
 import Attendance from 'pages/Attendance';
 import Exams from 'pages/Exams';
 import FinalResults from 'pages/FinalResults';
+import VoiceBroadcast from 'pages/VoiceBroadcast';
 import { View, Class, Student, Language } from 'types';
 import { t } from 'translations';
 import { BookOpen, ShieldAlert } from 'lucide-react';
@@ -94,6 +95,7 @@ const App: React.FC = () => {
                   onNavigateToExams={() => setView('exams')}
                   onNavigateToClasses={() => setView('classes')}
                   onNavigateToTeachers={() => setView('teachers')}
+                  onNavigateToVoiceBroadcast={() => setView('voice-broadcast')}
                 />;
       case 'classes':
         return <Classes onClassClick={(cls) => { setSelectedClass(cls); setView('students'); }} lang={lang} madrasah={madrasah} dataVersion={dataVersion} triggerRefresh={triggerRefresh} readOnly={role === 'teacher'} />;
@@ -133,6 +135,8 @@ const App: React.FC = () => {
         return <AdminPanel lang={lang} currentView={view === 'admin-approvals' ? 'approvals' : view === 'admin-dashboard' ? 'dashboard' : 'list'} dataVersion={dataVersion} onProfileUpdate={refreshMadrasah} />;
       case 'wallet-sms':
         return <WalletSMS lang={lang} madrasah={madrasah} triggerRefresh={triggerRefresh} dataVersion={dataVersion} />;
+      case 'voice-broadcast':
+        return <VoiceBroadcast lang={lang} madrasah={madrasah} triggerRefresh={triggerRefresh} dataVersion={dataVersion} />;
       case 'data-management':
         return <DataManagement lang={lang} madrasah={madrasah} onBack={() => setView('account')} triggerRefresh={triggerRefresh} />;
       case 'teachers':

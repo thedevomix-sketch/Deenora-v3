@@ -76,7 +76,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   const [editStatus, setEditStatus] = useState<'active' | 'suspended' | 'trial'>('active');
   const [editUiMode, setEditUiMode] = useState<'madrasah' | 'school'>('madrasah');
   const [editTheme, setEditTheme] = useState('default');
-  const [editTemplateSet, setEditTemplateSet] = useState('default');
   const [editResultEngine, setEditResultEngine] = useState<'school' | 'befaq' | 'qawmi_custom'>('school');
   const [editResultSystem, setEditResultSystem] = useState<'grading' | 'marks' | 'hifz'>('grading');
   const [editAttendanceType, setEditAttendanceType] = useState<'daily' | 'period'>('daily');
@@ -237,7 +236,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     setEditStatus(user.status || 'active');
     setEditUiMode(user.config_json?.ui_mode || 'madrasah');
     setEditTheme(user.theme || 'default');
-    setEditTemplateSet(user.config_json?.template_set || 'default');
     setEditResultEngine(user.config_json?.result_engine || 'school');
     setEditResultSystem(user.config_json?.result_system || 'grading');
     setEditAttendanceType(user.config_json?.attendance_type || 'daily');
@@ -287,7 +285,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
           ...(selectedUser.config_json || {}),
           modules: editModules,
           ui_mode: editUiMode,
-          template_set: editTemplateSet,
           result_engine: editResultEngine,
           result_system: editResultSystem,
           attendance_type: editAttendanceType,
@@ -912,18 +909,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                                </div>
                             </div>
 
-                            <div className="space-y-1.5">
-                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Template Set</label>
-                               <select 
-                                 className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
-                                 value={editTemplateSet}
-                                 onChange={(e) => setEditTemplateSet(e.target.value)}
-                               >
-                                 <option value="default">Default Templates</option>
-                                 <option value="premium">Premium Templates</option>
-                                 <option value="custom">Custom</option>
-                               </select>
-                            </div>
                             <div className="space-y-1.5">
                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Result Engine</label>
                                <select 
