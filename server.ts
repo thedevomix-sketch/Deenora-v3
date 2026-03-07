@@ -47,12 +47,38 @@ async function startServer() {
 
   app.post('/api/awaj/voices', async (req, res) => {
     try {
+      const { name, file_url } = req.body;
+      let body: any = JSON.stringify(req.body);
+      let headers: any = { ...awajHeaders };
+
+      if (file_url) {
+        // Download the file from file_url
+        const fileRes = await fetch(file_url);
+        if (!fileRes.ok) throw new Error('Failed to download file from URL');
+        const fileBuffer = await fileRes.arrayBuffer();
+        
+        // Create FormData
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('file', new Blob([fileBuffer], { type: 'audio/mpeg' }), 'voice.mp3');
+
+        body = formData;
+        delete headers['Content-Type']; // Let fetch set it with boundary
+      }
+
       const response = await fetch(`${AWAJ_BASE_URL}/voices`, {
         method: 'POST',
-        headers: awajHeaders,
-        body: JSON.stringify(req.body)
+        headers: headers,
+        body: body
       });
-      const data = await response.json();
+      
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        data = { message: await response.text() };
+      }
+      
       if (!response.ok) {
         return res.status(response.status).json(data);
       }
