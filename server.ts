@@ -2,6 +2,8 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import FormData from 'form-data';
+import fetch from 'node-fetch';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -57,13 +59,20 @@ async function startServer() {
         if (!fileRes.ok) throw new Error('Failed to download file from URL');
         const fileBuffer = await fileRes.arrayBuffer();
         
-        // Create FormData
+        // Use Node.js FormData equivalent or standard fetch FormData
         const formData = new FormData();
         formData.append('name', name);
-        formData.append('file', new Blob([fileBuffer], { type: 'audio/mpeg' }), 'voice.mp3');
+        formData.append('file', Buffer.from(fileBuffer), {
+          filename: 'voice.mp3',
+          contentType: 'audio/mpeg'
+        });
 
         body = formData;
-        delete headers['Content-Type']; // Let fetch set it with boundary
+        // Merge form-data headers (which include boundary) with our auth headers
+        headers = {
+          ...headers,
+          ...formData.getHeaders()
+        };
       }
 
       const response = await fetch(`${AWAJ_BASE_URL}/voices`, {
@@ -80,10 +89,12 @@ async function startServer() {
       }
       
       if (!response.ok) {
+        console.error('Awaj API Error:', response.status, data);
         return res.status(response.status).json(data);
       }
       res.json(data);
     } catch (error: any) {
+      console.error('Awaj API Exception:', error);
       res.status(500).json({ error: error.message });
     }
   });
