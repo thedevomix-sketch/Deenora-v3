@@ -61,7 +61,7 @@ async function startServer() {
 
   app.get('/api/awaj/broadcast/:id', async (req, res) => {
     try {
-      const response = await fetch(`${AWAJ_BASE_URL}/broadcasts/${req.params.id}`, { headers: awajHeaders });
+      const response = await fetch(`${AWAJ_BASE_URL}/broadcasts/${req.params.id}/result`, { headers: awajHeaders });
       const data = await response.json();
       res.json(data);
     } catch (error: any) {

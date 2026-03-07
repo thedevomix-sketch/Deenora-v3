@@ -62,13 +62,14 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
       if (response.ok) {
         const data = await response.json();
         // Assuming data is an array of voices or has a data property
-        const voices = Array.isArray(data) ? data : (data.data || []);
+        const voices = Array.isArray(data) ? data : (data.voices || data.data || []);
         
         // Sync Awaj voices to Supabase
         for (const v of voices) {
-          const providerVoiceId = String(v.id || v.voice_id);
+          const providerVoiceId = String(v.name || v.id || v.voice_id);
           const title = v.name || v.title || 'Unknown Voice';
           const duration = v.duration || 0;
+          const status = v.status || 'approved';
           
           if (providerVoiceId && providerVoiceId !== 'undefined') {
             // Check if it exists
@@ -80,7 +81,7 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
                 title: title,
                 provider_voice_id: providerVoiceId,
                 duration: duration,
-                provider_status: 'approved',
+                provider_status: status,
                 admin_status: 'approved'
               });
             }
@@ -102,7 +103,7 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
       const response = await fetch('/api/awaj/senders');
       if (response.ok) {
         const data = await response.json();
-        const sendersList = Array.isArray(data) ? data : (data.data || []);
+        const sendersList = Array.isArray(data) ? data : (data.senders || data.data || []);
         setSenders(sendersList);
       }
     } catch (error) {
@@ -135,7 +136,7 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
             const result = await response.json();
             // Map Awaj status to our internal status
             let newStatus = 'completed'; // Default to completed if unknown
-            const providerStatus = (result.status || result.state || '').toLowerCase();
+            const providerStatus = (result.broadcast?.status || result.status || result.state || '').toLowerCase();
             
             if (['pending', 'queued', 'scheduled'].includes(providerStatus)) {
               newStatus = 'pending';
@@ -203,15 +204,17 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
       if (!template) throw new Error('Selected voice template not found.');
 
       // 1. Send to Awaj Digital API
+      const requestId = 'req_' + Math.random().toString(36).substr(2, 9);
       const response = await fetch('/api/awaj/broadcast', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          voice_id: template.provider_voice_id,
-          contacts: phoneNumbers,
-          sender_id: selectedSenderId,
+          request_id: requestId,
+          voice: template.provider_voice_id,
+          sender: selectedSenderId,
+          phone_numbers: phoneNumbers,
         })
       });
 
@@ -221,7 +224,7 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
       }
 
       const result = await response.json();
-      const campaignId = result.campaign_id || result.id || 'camp_' + Math.random().toString(36).substr(2, 9);
+      const campaignId = result.broadcast?.id || result.campaign_id || result.id || 'camp_' + Math.random().toString(36).substr(2, 9);
 
       // 2. Save to Supabase
       const { error } = await supabase.from('voice_broadcasts').insert({
@@ -337,7 +340,7 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
                   >
                     <option value="">-- Select Sender ID --</option>
                     {senders.map(s => (
-                      <option key={s.id || s.caller_id} value={s.id || s.caller_id}>{s.caller_id || s.id || s.name}</option>
+                      <option key={s.id || s.callingNumber || s.caller_id} value={s.callingNumber || s.id || s.caller_id}>{s.callingNumber || s.caller_id || s.id || s.name}</option>
                     ))}
                   </select>
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={20} />
