@@ -133,6 +133,7 @@ CREATE TABLE IF NOT EXISTS public.institutions (
   reve_secret_key TEXT,
   reve_caller_id TEXT,
   reve_client_id TEXT,
+  voice_sender_id TEXT,
   subscription_end DATE,
   login_code TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -168,6 +169,10 @@ BEGIN
 
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'institutions' AND column_name = 'subscription_end') THEN
         ALTER TABLE public.institutions ADD COLUMN subscription_end DATE;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'institutions' AND column_name = 'voice_sender_id') THEN
+        ALTER TABLE public.institutions ADD COLUMN voice_sender_id TEXT;
     END IF;
 END $$;
 

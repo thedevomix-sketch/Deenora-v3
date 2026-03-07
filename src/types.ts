@@ -47,6 +47,7 @@ export interface Institution {
   reve_caller_id?: string;
   reve_client_id?: string;
   subscription_end?: string;
+  voice_sender_id?: string;
 }
 
 export interface BefaqExam {

@@ -27,9 +27,104 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'madrasah' | 'school' | 'kindergarten' | 'nurani'>('all');
-  const [view, setView] = useState<'list' | 'approvals' | 'details' | 'dashboard'>(
+  const [view, setView] = useState<'list' | 'approvals' | 'details' | 'dashboard' | 'voice_approvals'>(
     currentView === 'approvals' ? 'approvals' : currentView === 'dashboard' ? 'dashboard' : 'list'
   );
+  const [pendingVoiceTemplates, setPendingVoiceTemplates] = useState<any[]>([]);
+  const [approvingVoiceId, setApprovingVoiceId] = useState<string | null>(null);
+  const [rejectingVoiceId, setRejectingVoiceId] = useState<string | null>(null);
+
+  const fetchPendingVoiceTemplates = async () => {
+    const { data, error } = await supabase
+      .from('voice_templates')
+      .select('*, institutions(name)')
+      .eq('admin_status', 'pending')
+      .order('uploaded_at', { ascending: false });
+    
+    if (error) {
+      console.error("Error fetching voice templates:", error);
+      return [];
+    }
+    return data || [];
+  };
+
+  const [approvingVoice, setApprovingVoice] = useState<any>(null);
+  const [providerVoiceIdInput, setProviderVoiceIdInput] = useState('');
+
+  const handleVoiceApproval = async (templateId: string, status: 'approved' | 'rejected') => {
+    if (status === 'approved') {
+      const template = pendingVoiceTemplates.find(t => t.id === templateId);
+      if (template) {
+        setApprovingVoice(template);
+        setProviderVoiceIdInput(template.provider_voice_id || '');
+      }
+      return;
+    }
+
+    // Rejection logic remains the same
+    setRejectingVoiceId(templateId);
+    try {
+      const { error } = await supabase
+        .from('voice_templates')
+        .update({ 
+          admin_status: 'rejected',
+          provider_status: 'rejected'
+        })
+        .eq('id', templateId);
+
+      if (error) throw error;
+
+      setStatusModal({
+        show: true,
+        type: 'success',
+        title: 'বাতিল',
+        message: 'ভয়েস টেমপ্লেটটি বাতিল করা হয়েছে।'
+      });
+
+      // Refresh list
+      const updated = await fetchPendingVoiceTemplates();
+      setPendingVoiceTemplates(updated);
+    } catch (err: any) {
+      setStatusModal({ show: true, type: 'error', title: 'ত্রুটি', message: err.message });
+    } finally {
+      setRejectingVoiceId(null);
+    }
+  };
+
+  const confirmVoiceApproval = async () => {
+    if (!approvingVoice) return;
+    setApprovingVoiceId(approvingVoice.id);
+    
+    try {
+      const { error } = await supabase
+        .from('voice_templates')
+        .update({ 
+          admin_status: 'approved',
+          provider_status: 'approved', // Assuming if admin approves, it's ready for provider or already approved there
+          provider_voice_id: providerVoiceIdInput || approvingVoice.provider_voice_id
+        })
+        .eq('id', approvingVoice.id);
+
+      if (error) throw error;
+
+      setStatusModal({
+        show: true,
+        type: 'success',
+        title: 'অনুমোদিত',
+        message: 'ভয়েস টেমপ্লেটটি সফলভাবে অনুমোদন করা হয়েছে।'
+      });
+
+      // Refresh list
+      const updated = await fetchPendingVoiceTemplates();
+      setPendingVoiceTemplates(updated);
+    } catch (err: any) {
+      setStatusModal({ show: true, type: 'error', title: 'ত্রুটি', message: err.message });
+    } finally {
+      setApprovingVoiceId(null);
+      setApprovingVoice(null);
+      setProviderVoiceIdInput('');
+    }
+  };
   const [smsToCredit, setSmsToCredit] = useState<{ [key: string]: string }>({});
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   
@@ -63,6 +158,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   const [editReveApiKey, setEditReveApiKey] = useState('');
   const [editReveSecretKey, setEditReveSecretKey] = useState('');
   const [editReveCallerId, setEditReveCallerId] = useState('');
+  const [editVoiceSenderId, setEditVoiceSenderId] = useState('');
   const [editModules, setEditModules] = useState({
     attendance: true,
     fees: true,
@@ -186,6 +282,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
             if (newSmsMap[tr.id] === undefined) newSmsMap[tr.id] = true;
           });
           setSmsEnabledMap(newSmsMap);
+        }
+      }
+      if (view === 'voice_approvals') {
+        const vTemplates = await fetchPendingVoiceTemplates();
+        if (isMounted) {
+          setPendingVoiceTemplates(vTemplates);
         }
       }
     } catch (err) { 
@@ -542,6 +644,61 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
             </div>
           )}
 
+          {view === 'voice_approvals' && (
+            <div className="space-y-6 animate-in slide-in-from-right-10 duration-500">
+               <div className="flex items-center justify-between px-2">
+                  <h1 className="text-xl font-black text-[#1E293B] font-noto">Voice Approvals</h1>
+                  <button onClick={() => initData()} className="p-2 bg-blue-50 rounded-xl text-[#2563EB] active:scale-95 transition-all border border-blue-100 shadow-sm">
+                     <RefreshCw size={18} />
+                  </button>
+               </div>
+
+               <div className="space-y-4">
+                  {pendingVoiceTemplates.length > 0 ? pendingVoiceTemplates.map(t => (
+                    <div key={t.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-bubble">
+                       <div className="flex items-start justify-between mb-4">
+                          <div>
+                             <h3 className="text-lg font-black text-[#1E3A8A] font-noto">{t.title}</h3>
+                             <p className="text-xs font-bold text-slate-400 mt-1">{t.institutions?.name}</p>
+                          </div>
+                          <span className="bg-yellow-50 text-yellow-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-yellow-100">
+                             Pending
+                          </span>
+                       </div>
+
+                       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6">
+                          <audio controls src={t.file_url} className="w-full h-10" />
+                       </div>
+
+                       <div className="grid grid-cols-2 gap-3">
+                          <button 
+                            onClick={() => handleVoiceApproval(t.id, 'approved')}
+                            disabled={approvingVoiceId === t.id || rejectingVoiceId === t.id}
+                            className="py-3 bg-emerald-500 text-white font-black rounded-xl shadow-lg shadow-emerald-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest disabled:opacity-50"
+                          >
+                             {approvingVoiceId === t.id ? <Loader2 className="animate-spin" size={16} /> : <><CheckCircle2 size={16} /> Approve</>}
+                          </button>
+                          <button 
+                            onClick={() => handleVoiceApproval(t.id, 'rejected')}
+                            disabled={approvingVoiceId === t.id || rejectingVoiceId === t.id}
+                            className="py-3 bg-red-50 text-red-500 border border-red-100 font-black rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest disabled:opacity-50"
+                          >
+                             {rejectingVoiceId === t.id ? <Loader2 className="animate-spin" size={16} /> : <><XCircle size={16} /> Reject</>}
+                          </button>
+                       </div>
+                    </div>
+                  )) : (
+                    <div className="text-center py-16 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
+                       <div className="w-16 h-16 bg-slate-100 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <CheckCircle2 size={32} />
+                       </div>
+                       <p className="text-slate-400 text-xs font-black uppercase tracking-widest">No Pending Approvals</p>
+                    </div>
+                  )}
+               </div>
+            </div>
+          )}
+
           {view === 'list' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between px-2">
@@ -822,6 +979,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                             <div className="space-y-1.5">
                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Override Sender ID</label>
                                <input type="text" className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm" value={editReveCallerId} onChange={(e) => setEditReveCallerId(e.target.value)} placeholder="e.g. 12345" />
+                            </div>
+                            <div className="space-y-1.5">
+                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Voice Sender ID</label>
+                               <input type="text" className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm" value={editVoiceSenderId} onChange={(e) => setEditVoiceSenderId(e.target.value)} placeholder="e.g. 8801..." />
                             </div>
 
                             <div className="space-y-1.5">
@@ -1123,6 +1284,51 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
              <button onClick={() => setStatusModal({ ...statusModal, show: false })} className={`w-full mt-8 py-4 font-black rounded-full text-xs uppercase tracking-[0.2em] transition-all shadow-premium active:scale-95 ${statusModal.type === 'success' ? 'bg-[#2563EB] text-white' : 'bg-red-500 text-white'}`}>
                 {lang === 'bn' ? 'ঠিক আছে' : 'Continue'}
              </button>
+          </div>
+        </div>,
+        document.body
+      )}
+      {approvingVoice && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl border border-white/50 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-black text-[#1E293B] font-noto">Approve Voice</h2>
+              <button onClick={() => { setApprovingVoice(null); setProviderVoiceIdInput(''); }} className="w-10 h-10 rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100 flex items-center justify-center transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <p className="text-xs font-bold text-slate-400 mb-1">Voice Title</p>
+                <p className="text-lg font-black text-[#1E3A8A]">{approvingVoice.title}</p>
+                <div className="mt-4">
+                  <audio controls src={approvingVoice.file_url} className="w-full h-8" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Provider Voice ID (Optional)</label>
+                <input 
+                  type="text" 
+                  className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20" 
+                  value={providerVoiceIdInput} 
+                  onChange={(e) => setProviderVoiceIdInput(e.target.value)} 
+                  placeholder="e.g. 12345 or voice_xyz"
+                />
+                <p className="text-[10px] text-slate-400 px-2">
+                  Enter the ID from Awaj Digital panel if available. If left empty, it will use the existing ID or remain empty.
+                </p>
+              </div>
+
+              <button 
+                onClick={confirmVoiceApproval} 
+                disabled={approvingVoiceId === approvingVoice.id}
+                className="w-full h-14 bg-emerald-500 text-white font-black rounded-[1.5rem] mt-4 shadow-lg shadow-emerald-200 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {approvingVoiceId === approvingVoice.id ? <Loader2 className="animate-spin" /> : 'Confirm Approval'}
+              </button>
+            </div>
           </div>
         </div>,
         document.body

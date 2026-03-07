@@ -63,63 +63,74 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
     if (!madrasah) return;
     setLoading(true);
     try {
-      // Fetch from Awaj API via our server-side proxy
+      // First, get local templates
+      const { data: localTemplates } = await supabase
+        .from('voice_templates')
+        .select('*')
+        .eq('institution_id', madrasah.id)
+        .order('uploaded_at', { ascending: false });
+      
+      if (localTemplates) setTemplates(localTemplates);
+
+      // Sync with Awaj API (optional, can be removed if we only rely on local uploads)
+      // For now, we'll keep it but prioritize local data
+      /*
       const response = await fetch('/api/awaj/voices');
       if (response.ok) {
         const data = await response.json();
-        // Assuming data is an array of voices or has a data property
         const voices = Array.isArray(data) ? data : (data.voices || data.data || []);
         
-        // Sync Awaj voices to Supabase
         for (const v of voices) {
-          const providerVoiceId = String(v.name || v.id || v.voice_id);
-          const title = v.name || v.title || 'Unknown Voice';
-          const duration = v.duration || 0;
-          const status = v.status || 'approved';
-          
-          if (providerVoiceId && providerVoiceId !== 'undefined') {
-            // Check if it exists
-            const { data: existing } = await supabase.from('voice_templates').select('id').eq('provider_voice_id', providerVoiceId).maybeSingle();
-            
-            if (!existing) {
-              await supabase.from('voice_templates').insert({
-                institution_id: madrasah.id,
-                title: title,
-                provider_voice_id: providerVoiceId,
-                duration: duration,
-                provider_status: status,
-                admin_status: 'approved'
-              });
-            }
-          }
+           // Sync logic here if needed
         }
       }
+      */
     } catch (error) {
-      console.error('Error fetching voices from Awaj API:', error);
+      console.error('Error fetching voices:', error);
     } finally {
-      // Always fetch from Supabase to get the latest state (including synced voices)
-      const { data } = await supabase.from('voice_templates').select('*').eq('institution_id', madrasah.id).order('created_at', { ascending: false });
-      if (data) setTemplates(data);
       setLoading(false);
     }
   };
 
   const fetchSenders = async () => {
     try {
+      // Fetch default senders from Awaj API
       const response = await fetch('/api/awaj/senders');
+      let sendersList: any[] = [];
+      
       if (response.ok) {
         const data = await response.json();
-        const sendersList = Array.isArray(data) ? data : (data.senders || data.data || []);
-        setSenders(sendersList);
+        sendersList = Array.isArray(data) ? data : (data.senders || data.data || []);
       }
+
+      if (madrasah?.voice_sender_id) {
+        // Check if it's already in the list
+        const exists = sendersList.some(s => 
+          (s.callingNumber === madrasah.voice_sender_id) || 
+          (s.caller_id === madrasah.voice_sender_id) || 
+          (s.id === madrasah.voice_sender_id)
+        );
+
+        if (!exists) {
+          sendersList.unshift({
+            id: madrasah.voice_sender_id,
+            callingNumber: madrasah.voice_sender_id,
+            name: 'Dedicated Sender ID'
+          });
+        }
+      }
+
+      setSenders(sendersList);
     } catch (error) {
       console.error('Error fetching senders:', error);
     }
   };
 
   useEffect(() => {
-    fetchSenders();
-  }, []);
+    if (madrasah) {
+      fetchSenders();
+    }
+  }, [madrasah]);
 
   const fetchClasses = async () => {
     if (!madrasah) return;
@@ -451,28 +462,32 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
               <div className="flex justify-center py-10"><Loader2 className="animate-spin text-blue-500" size={32} /></div>
             ) : templates.length > 0 ? (
               templates.map(t => (
-                <div key={t.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between">
-                  <div>
-                    <h3 className="font-black text-slate-800">{t.title}</h3>
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="text-xs font-bold text-slate-500 flex items-center gap-1"><Clock size={12} /> {t.duration}s</span>
-                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${t.admin_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : t.admin_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                        Admin: {t.admin_status}
-                      </span>
-                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${t.provider_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : t.provider_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                        Provider: {t.provider_status}
-                      </span>
+                <div key={t.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-black text-slate-800">{t.title}</h3>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-xs font-bold text-slate-500 flex items-center gap-1"><Clock size={12} /> {t.duration}s</span>
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${t.admin_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : t.admin_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                          Admin: {t.admin_status}
+                        </span>
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${t.provider_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : t.provider_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                          Provider: {t.provider_status}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <button className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                    <Play size={18} className="ml-1" />
-                  </button>
+                  {t.file_url && (
+                    <div className="bg-slate-50 p-2 rounded-xl">
+                      <audio controls src={t.file_url} className="w-full h-8" />
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
               <div className="text-center py-10 bg-white rounded-[2rem] border border-slate-100">
                 <Mic size={48} className="mx-auto text-slate-200 mb-4" />
-                <p className="text-slate-500 font-bold">No voice templates found from provider.</p>
+                <p className="text-slate-500 font-bold">No voice templates found.</p>
               </div>
             )}
           </div>
