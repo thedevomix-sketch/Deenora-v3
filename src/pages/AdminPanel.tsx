@@ -6,7 +6,6 @@ import { createClient } from '@supabase/supabase-js';
 import { Loader2, Search, ChevronRight, User as UserIcon, ShieldCheck, Database, Globe, CheckCircle, XCircle, CreditCard, Save, X, Settings, Smartphone, MessageSquare, Key, Shield, ArrowLeft, ArrowRight, Copy, Check, Calendar, Users, Layers, MonitorSmartphone, Server, BarChart3, TrendingUp, RefreshCcw, Clock, Hash, History as HistoryIcon, Zap, Activity, PieChart, Users2, CheckCircle2, AlertCircle, AlertTriangle, RefreshCw, Trash2, Sliders, ToggleLeft, ToggleRight, GraduationCap, Banknote, PhoneCall } from 'lucide-react';
 import { supabase, smsApi } from 'supabase';
 import { Institution, Language, Transaction, AdminSMSStock } from 'types';
-import { AcademicYearManager } from 'components/AcademicYearManager';
 
 interface InstitutionWithStats extends Institution {
   student_count?: number;
@@ -98,7 +97,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
   const [newInstType, setNewInstType] = useState<'madrasah' | 'school' | 'kindergarten' | 'nurani'>('madrasah');
   const [newInstLoginCode, setNewInstLoginCode] = useState('');
   const [isCreatingInst, setIsCreatingInst] = useState(false);
-  const [showAcademicYearManager, setShowAcademicYearManager] = useState(false);
 
   const fetchGlobalCounts = async () => {
     const [studentsRes, classesRes, teachersRes, smsAllocRes, currentBalRes] = await Promise.all([
@@ -797,17 +795,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                          </div>
                       </div>
 
-                      {editModules.academic_year_promotion && (
-                         <div className="bg-purple-50 p-6 rounded-[2.5rem] space-y-4 border border-purple-100">
-                            <h4 className="text-[11px] font-black text-purple-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                               <GraduationCap size={14} /> Academic Management
-                            </h4>
-                            <button onClick={() => setShowAcademicYearManager(true)} className="w-full py-4 bg-white text-purple-600 font-black rounded-2xl shadow-sm border border-purple-100 hover:bg-purple-600 hover:text-white transition-all flex items-center justify-center gap-2 active:scale-95">
-                               Manage Academic Year & Promotions <ArrowRight size={16} />
-                            </button>
-                         </div>
-                      )}
-
                       <div className="bg-slate-50 p-6 rounded-[2.5rem] space-y-6">
                          <div className="flex items-center justify-between px-1">
                             <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -1126,15 +1113,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
               </div>
            </div>
         </div>,
-        document.body
-      )}
-
-      {/* Academic Year Manager - PORTALED */}
-      {showAcademicYearManager && selectedUser && createPortal(
-        <AcademicYearManager 
-          institution={selectedUser} 
-          onClose={() => setShowAcademicYearManager(false)} 
-        />,
         document.body
       )}
 

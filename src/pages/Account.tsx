@@ -5,6 +5,7 @@ import { LogOut, Camera, Loader2, User as UserIcon, ShieldCheck, Database, Chevr
 import { supabase, smsApi } from 'supabase';
 import { Institution, Language, View } from 'types';
 import { t } from 'translations';
+import { AcademicYearManager } from 'components/AcademicYearManager';
 
 interface AccountProps {
   lang: Language;
@@ -22,6 +23,7 @@ const Account: React.FC<AccountProps> = ({ lang, setLang, onProfileUpdate, setVi
   const [saving, setSaving] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingGlobal, setIsEditingGlobal] = useState(false);
+  const [showAcademicYearManager, setShowAcademicYearManager] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState({ show: false, title: '', message: '' });
   
   const [stats, setStats] = useState({ students: 0, classes: 0, teachers: 0 });
@@ -224,6 +226,11 @@ const Account: React.FC<AccountProps> = ({ lang, setLang, onProfileUpdate, setVi
             </button>
             {!isSuperAdmin && (
               <>
+                {madrasah?.config_json?.modules?.academic_year_promotion && (
+                  <button onClick={() => setShowAcademicYearManager(true)} className="w-full p-6 sm:p-8 flex items-center justify-between group">
+                    <div className="flex items-center gap-4 sm:gap-6"><div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center"><GraduationCap size={22} /></div><div className="text-left"><h5 className="text-[17px] font-black text-[#1E3A8A] font-noto">Academic Year</h5><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Promotion & Sessions</p></div></div><ChevronRight size={22} className="text-slate-200" />
+                  </button>
+                )}
                 <button onClick={() => setView('teachers')} className="w-full p-6 sm:p-8 flex items-center justify-between group">
                   <div className="flex items-center gap-4 sm:gap-6"><div className="w-12 h-12 bg-blue-50 text-[#2563EB] rounded-2xl flex items-center justify-center"><Users size={22} /></div><div className="text-left"><h5 className="text-[17px] font-black text-[#1E3A8A] font-noto">{t('manage_teachers', lang)}</h5><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Staff Access</p></div></div><ChevronRight size={22} className="text-slate-200" />
                 </button>
@@ -251,6 +258,15 @@ const Account: React.FC<AccountProps> = ({ lang, setLang, onProfileUpdate, setVi
           <div className="flex items-center gap-4 sm:gap-6"><div className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center"><LogOut size={22} /></div><div className="text-left"><h5 className="text-[17px] font-black text-red-600 font-noto">{t('logout', lang)}</h5><p className="text-[10px] font-bold text-red-300 uppercase tracking-widest mt-1">{t('logout_system', lang)}</p></div></div><ChevronRight size={22} className="text-red-100" />
         </button>
       </div>
+
+      {/* Academic Year Manager - PORTALED */}
+      {showAcademicYearManager && madrasah && createPortal(
+        <AcademicYearManager 
+          institution={madrasah} 
+          onClose={() => setShowAcademicYearManager(false)} 
+        />,
+        document.body
+      )}
 
       {/* SYSTEM CORE UPDATE POPUP - PORTALED */}
       {isEditingGlobal && createPortal(
