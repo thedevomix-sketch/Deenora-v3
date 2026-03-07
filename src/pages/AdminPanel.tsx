@@ -91,37 +91,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     }
   };
 
-  const [isUploadingToAwaj, setIsUploadingToAwaj] = useState(false);
+  const [isFetchingAwajVoices, setIsFetchingAwajVoices] = useState(false);
+  const [awajVoices, setAwajVoices] = useState<any[]>([]);
 
-  const handleUploadToAwaj = async () => {
-    if (!approvingVoice) return;
-    setIsUploadingToAwaj(true);
+  const handleFetchAwajVoices = async () => {
+    setIsFetchingAwajVoices(true);
     try {
-      const awajResponse = await fetch('/api/awaj/voices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: approvingVoice.title,
-          file_url: approvingVoice.file_url
-        })
-      });
-
+      const awajResponse = await fetch('/api/awaj/voices');
       if (awajResponse.ok) {
         const awajData = await awajResponse.json();
-        if (awajData.voice?.id || awajData.id) {
-          setProviderVoiceIdInput(awajData.voice?.id || awajData.id);
+        // Assuming the API returns an array of voices or an object with a voices array
+        const voicesList = Array.isArray(awajData) ? awajData : (awajData.voices || awajData.data || []);
+        setAwajVoices(voicesList);
+        if (voicesList.length === 0) {
           setStatusModal({
             show: true,
-            type: 'success',
-            title: 'সফল',
-            message: 'Awaj Digital এ সফলভাবে আপলোড হয়েছে।'
+            type: 'error',
+            title: 'No Voices Found',
+            message: 'No approved voices found in your Awaj Digital account.'
           });
-        } else {
-          throw new Error('No ID returned from Awaj Digital');
         }
       } else {
-        // Response is already parsed or we need to parse it once
-        let errorMsg = 'Unknown error occurred while uploading to Awaj Digital';
+        let errorMsg = 'Unknown error occurred while fetching from Awaj Digital';
         try {
           const textData = await awajResponse.text();
           try {
@@ -136,10 +127,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
         throw new Error(`Awaj API Error: ${errorMsg}`);
       }
     } catch (err: any) {
-      console.error('Error uploading to Awaj:', err);
+      console.error('Error fetching from Awaj:', err);
       setStatusModal({ show: true, type: 'error', title: 'ত্রুটি', message: err.message });
     } finally {
-      setIsUploadingToAwaj(false);
+      setIsFetchingAwajVoices(false);
     }
   };
 
@@ -1375,26 +1366,43 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Provider Voice ID (Optional)</label>
-                <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    className="flex-1 h-14 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20" 
-                    value={providerVoiceIdInput} 
-                    onChange={(e) => setProviderVoiceIdInput(e.target.value)} 
-                    placeholder="e.g. 12345 or voice_xyz"
-                  />
-                  <button
-                    onClick={handleUploadToAwaj}
-                    disabled={isUploadingToAwaj || !!providerVoiceIdInput}
-                    className="h-14 px-4 bg-blue-50 text-blue-600 font-bold rounded-2xl hover:bg-blue-100 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
-                    title="Upload to Awaj Digital"
-                  >
-                    {isUploadingToAwaj ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
-                    <span className="text-xs">Upload to Awaj</span>
-                  </button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      className="flex-1 h-14 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-black text-[#1E3A8A] outline-none focus:border-[#2563EB]/20" 
+                      value={providerVoiceIdInput} 
+                      onChange={(e) => setProviderVoiceIdInput(e.target.value)} 
+                      placeholder="e.g. 12345 or voice_xyz"
+                    />
+                    <button
+                      onClick={handleFetchAwajVoices}
+                      disabled={isFetchingAwajVoices}
+                      className="h-14 px-4 bg-blue-50 text-blue-600 font-bold rounded-2xl hover:bg-blue-100 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                      title="Fetch Voices from Awaj Digital"
+                    >
+                      {isFetchingAwajVoices ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} className="rotate-180" />}
+                      <span className="text-xs">Fetch Voices</span>
+                    </button>
+                  </div>
+                  
+                  {awajVoices.length > 0 && (
+                    <div className="mt-2 bg-slate-50 border border-slate-200 rounded-2xl p-2 max-h-40 overflow-y-auto">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Select a Voice</p>
+                      {awajVoices.map((voice: any) => (
+                        <button
+                          key={voice.id || voice.voice_id}
+                          onClick={() => setProviderVoiceIdInput(voice.id || voice.voice_id)}
+                          className="w-full text-left px-4 py-2 hover:bg-white rounded-xl text-sm font-medium text-slate-700 transition-colors"
+                        >
+                          {voice.name || voice.title} <span className="text-slate-400 text-xs ml-2">({voice.id || voice.voice_id})</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <p className="text-[10px] text-slate-400 px-2">
-                  Click "Upload to Awaj" to automatically send the voice and get the ID, or enter it manually.
+                <p className="text-[10px] text-slate-400 px-2 mt-2">
+                  Click "Fetch Voices" to get a list of approved voices from Awaj Digital, or enter the ID manually.
                 </p>
               </div>
 
