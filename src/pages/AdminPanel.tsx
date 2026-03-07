@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
 // Fix: Import icons from lucide-react instead of ../supabase
-import { Loader2, Search, ChevronRight, User as UserIcon, ShieldCheck, Database, Globe, CheckCircle, XCircle, CreditCard, Save, X, Settings, Smartphone, MessageSquare, Key, Shield, ArrowLeft, ArrowRight, Copy, Check, Calendar, Users, Layers, MonitorSmartphone, Server, BarChart3, TrendingUp, RefreshCcw, Clock, Hash, History as HistoryIcon, Zap, Activity, PieChart, Users2, CheckCircle2, AlertCircle, AlertTriangle, RefreshCw, Trash2, Sliders, ToggleLeft, ToggleRight, GraduationCap, Banknote, PhoneCall } from 'lucide-react';
+import { Loader2, Search, ChevronRight, User as UserIcon, ShieldCheck, Database, Globe, CheckCircle, XCircle, CreditCard, Save, X, Settings, Smartphone, MessageSquare, Key, Shield, ArrowLeft, ArrowRight, Copy, Check, Calendar, Users, Layers, MonitorSmartphone, Server, BarChart3, TrendingUp, RefreshCcw, Clock, Hash, History as HistoryIcon, Zap, Activity, PieChart, Users2, CheckCircle2, AlertCircle, AlertTriangle, RefreshCw, Trash2, Sliders, ToggleLeft, ToggleRight, GraduationCap, Banknote, PhoneCall, Mic } from 'lucide-react';
 import { supabase, smsApi } from 'supabase';
 import { Institution, Language, Transaction, AdminSMSStock } from 'types';
 
@@ -251,10 +251,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     let isMounted = true;
     try {
       if (view === 'list' || view === 'dashboard') {
-        const [mList, gStats, aStock] = await Promise.all([
+        const [mList, gStats, aStock, vTemplates] = await Promise.all([
           fetchAllMadrasahs(),
           fetchGlobalCounts(),
-          fetchAdminStock()
+          fetchAdminStock(),
+          fetchPendingVoiceTemplates()
         ]);
         if (isMounted) {
           setMadrasahs(mList.map(m => {
@@ -267,6 +268,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
           }));
           setGlobalStats(gStats);
           setAdminStock(aStock);
+          setPendingVoiceTemplates(vTemplates);
         }
       }
       if (view === 'approvals') {
@@ -598,6 +600,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                   <h4 className="text-2xl font-black text-[#1E3A8A]">{madrasahs.length}</h4>
                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">Madrasahs</p>
                 </div>
+                <div onClick={() => setView('voice_approvals')} className="bg-white p-5 rounded-[2.2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center cursor-pointer hover:border-blue-200 transition-all active:scale-95">
+                  <div className="w-10 h-10 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner">
+                    <Mic size={20} />
+                  </div>
+                  <h4 className="text-2xl font-black text-[#1E3A8A]">{pendingVoiceTemplates.length}</h4>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">Pending Voice</p>
+                </div>
                 <div className="bg-white p-5 rounded-[2.2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center">
                   <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner">
                     <Activity size={20} />
@@ -647,7 +656,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
           {view === 'voice_approvals' && (
             <div className="space-y-6 animate-in slide-in-from-right-10 duration-500">
                <div className="flex items-center justify-between px-2">
-                  <h1 className="text-xl font-black text-[#1E293B] font-noto">Voice Approvals</h1>
+                  <div className="flex items-center gap-3">
+                     <button onClick={() => setView('dashboard')} className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors">
+                        <ArrowLeft size={20} />
+                     </button>
+                     <h1 className="text-xl font-black text-[#1E293B] font-noto">Voice Approvals</h1>
+                  </div>
                   <button onClick={() => initData()} className="p-2 bg-blue-50 rounded-xl text-[#2563EB] active:scale-95 transition-all border border-blue-100 shadow-sm">
                      <RefreshCw size={18} />
                   </button>
