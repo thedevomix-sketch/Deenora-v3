@@ -1391,11 +1391,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Select a Voice</p>
                       {awajVoices.map((voice: any) => (
                         <button
-                          key={voice.id || voice.voice_id}
-                          onClick={() => setProviderVoiceIdInput(voice.id || voice.voice_id)}
+                          key={voice.id || voice.name}
+                          onClick={() => setProviderVoiceIdInput(voice.name || voice.title)}
                           className="w-full text-left px-4 py-2 hover:bg-white rounded-xl text-sm font-medium text-slate-700 transition-colors"
                         >
-                          {voice.name || voice.title} <span className="text-slate-400 text-xs ml-2">({voice.id || voice.voice_id})</span>
+                          {voice.name || voice.title} <span className="text-slate-400 text-xs ml-2 uppercase">({voice.status})</span>
                         </button>
                       ))}
                     </div>
