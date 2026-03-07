@@ -45,6 +45,20 @@ async function startServer() {
     }
   });
 
+  app.post('/api/awaj/voices', async (req, res) => {
+    try {
+      const response = await fetch(`${AWAJ_BASE_URL}/voices`, {
+        method: 'POST',
+        headers: awajHeaders,
+        body: JSON.stringify(req.body)
+      });
+      const data = await response.json();
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post('/api/awaj/broadcast', async (req, res) => {
     try {
       const response = await fetch(`${AWAJ_BASE_URL}/broadcasts`, {

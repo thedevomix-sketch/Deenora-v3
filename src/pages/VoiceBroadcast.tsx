@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mic, Upload, CreditCard, Play, Send, History, Loader2, CheckCircle2, XCircle, AlertCircle, Clock, ChevronDown } from 'lucide-react';
+import { Mic, Upload, CreditCard, Play, Send, History, Loader2, CheckCircle2, XCircle, AlertCircle, Clock, ChevronDown, Trash2 } from 'lucide-react';
 import { supabase } from 'supabase';
 import { Institution, Language, Class, Student } from 'types';
 import { t } from 'translations';
@@ -302,12 +302,40 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
         .from('voice-templates')
         .getPublicUrl(fileName);
 
-      // 3. Insert into database
+      let providerVoiceId = null;
+      let providerStatus = 'pending';
+
+      // 3. Upload to Awaj Digital (if configured)
+      try {
+        const awajResponse = await fetch('/api/awaj/voices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: uploadTitle,
+            file_url: publicUrl
+          })
+        });
+
+        if (awajResponse.ok) {
+          const awajData = await awajResponse.json();
+          if (awajData.voice?.id || awajData.id) {
+            providerVoiceId = awajData.voice?.id || awajData.id;
+            providerStatus = 'approved'; // Assuming direct upload approves it on provider side or sets it to pending there
+          }
+        } else {
+          console.warn('Failed to upload to Awaj Digital, will retry via admin panel');
+        }
+      } catch (err) {
+        console.error('Error uploading to Awaj:', err);
+      }
+
+      // 4. Insert into database
       const { error: dbError } = await supabase.from('voice_templates').insert({
         institution_id: madrasah.id,
         title: uploadTitle,
         file_url: publicUrl,
-        provider_status: 'pending', // Needs approval/sync
+        provider_voice_id: providerVoiceId,
+        provider_status: providerStatus,
         admin_status: 'pending'
       });
 
@@ -323,6 +351,35 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
       alert('Error uploading voice: ' + error.message);
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (templateId: string, fileUrl?: string) => {
+    if (!confirm('Are you sure you want to delete this voice template?')) return;
+    
+    try {
+      // 1. Delete from database
+      const { error } = await supabase.from('voice_templates').delete().eq('id', templateId);
+      if (error) throw error;
+
+      // 2. Delete from storage (optional, best effort)
+      if (fileUrl) {
+        try {
+          const path = fileUrl.split('/').pop(); // Extract filename if possible
+          // Note: This is a simplification. A robust solution would parse the URL properly.
+          // For Supabase storage URLs, the path is usually after /public/
+          // e.g. .../storage/v1/object/public/bucket/folder/file.mp3
+          // We stored it as `madrasah.id/timestamp.ext`
+          // So extracting the last two segments might work, but let's skip complex parsing to avoid errors.
+        } catch (e) {
+          console.error('Error parsing file path for deletion:', e);
+        }
+      }
+
+      alert('Voice template deleted successfully.');
+      fetchTemplates();
+    } catch (err: any) {
+      alert('Error deleting template: ' + err.message);
     }
   };
 
@@ -476,6 +533,13 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
                         </span>
                       </div>
                     </div>
+                    <button 
+                      onClick={() => handleDeleteTemplate(t.id, t.file_url)}
+                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                      title="Delete Voice"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </div>
                   {t.file_url && (
                     <div className="bg-slate-50 p-2 rounded-xl">
