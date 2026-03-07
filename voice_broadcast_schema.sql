@@ -69,47 +69,47 @@ ALTER TABLE voice_call_logs ENABLE ROW LEVEL SECURITY;
 -- Wallets RLS
 CREATE POLICY "Institutions can view their own wallet" ON wallets
     FOR SELECT USING (institution_id IN (
-        SELECT institution_id FROM user_roles WHERE user_id = auth.uid()
+        SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
 
 -- Wallet Transactions RLS
 CREATE POLICY "Institutions can view their own wallet transactions" ON wallet_transactions
     FOR SELECT USING (institution_id IN (
-        SELECT institution_id FROM user_roles WHERE user_id = auth.uid()
+        SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
 
 -- Voice Templates RLS
 CREATE POLICY "Institutions can view their own voice templates" ON voice_templates
     FOR SELECT USING (institution_id IN (
-        SELECT institution_id FROM user_roles WHERE user_id = auth.uid()
+        SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
 CREATE POLICY "Institutions can insert their own voice templates" ON voice_templates
     FOR INSERT WITH CHECK (institution_id IN (
-        SELECT institution_id FROM user_roles WHERE user_id = auth.uid()
+        SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
 CREATE POLICY "Institutions can update their own voice templates" ON voice_templates
     FOR UPDATE USING (institution_id IN (
-        SELECT institution_id FROM user_roles WHERE user_id = auth.uid()
+        SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
 CREATE POLICY "Institutions can delete their own voice templates" ON voice_templates
     FOR DELETE USING (institution_id IN (
-        SELECT institution_id FROM user_roles WHERE user_id = auth.uid()
+        SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
 
 -- Voice Broadcasts RLS
 CREATE POLICY "Institutions can view their own voice broadcasts" ON voice_broadcasts
     FOR SELECT USING (institution_id IN (
-        SELECT institution_id FROM user_roles WHERE user_id = auth.uid()
+        SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
 CREATE POLICY "Institutions can insert their own voice broadcasts" ON voice_broadcasts
     FOR INSERT WITH CHECK (institution_id IN (
-        SELECT institution_id FROM user_roles WHERE user_id = auth.uid()
+        SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
 
 -- Voice Call Logs RLS
 CREATE POLICY "Institutions can view their own voice call logs" ON voice_call_logs
     FOR SELECT USING (institution_id IN (
-        SELECT institution_id FROM user_roles WHERE user_id = auth.uid()
+        SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
 
 -- Function to create wallet on institution creation
