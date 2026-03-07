@@ -70,7 +70,7 @@ async function startServer() {
         // Native fetch will automatically set the Content-Type header with the correct boundary
       }
 
-      const response = await fetch(`${AWAJ_BASE_URL}/voices`, {
+      const response = await fetch(`${AWAJ_BASE_URL}/voice`, {
         method: 'POST',
         headers: headers,
         body: body
