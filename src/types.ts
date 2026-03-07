@@ -21,6 +21,7 @@ export interface Institution {
       admit_card: boolean;
       seat_plan: boolean;
       accounting: boolean;
+      academic_year_promotion?: boolean;
     };
     result_engine: 'school' | 'befaq' | 'qawmi_custom';
     result_system: 'grading' | 'marks' | 'hifz';
@@ -234,6 +235,28 @@ export interface FinalResultExam {
   exam?: Exam;
 }
 
+export interface AcademicYear {
+  id: string;
+  institution_id: string;
+  year_name: string;
+  start_date: string;
+  end_date: string;
+  status: 'active' | 'archived';
+  created_at: string;
+}
+
+export interface PromotionLog {
+  id: string;
+  institution_id: string;
+  student_id: string;
+  from_class_id: string;
+  to_class_id: string;
+  academic_year_from_id: string;
+  academic_year_to_id: string;
+  executed_at: string;
+  status: 'promoted' | 'retained' | 'conditional';
+}
+
 export type View = 
   | 'home' 
   | 'classes' 
@@ -252,7 +275,8 @@ export type View =
   | 'accounting' 
   | 'attendance'
   | 'exams'
-  | 'final-results';
+  | 'final-results'
+  | 'academic-year';
 
 export interface AppState {
   currentView: View;

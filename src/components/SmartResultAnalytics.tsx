@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from 'supabase';
 import { Language } from 'types';
 import { t } from 'translations';
-import { TrendingUp, TrendingDown, Award, AlertCircle, Loader2, User, ChevronRight, BarChart2, BookOpen, Users, ArrowUpRight, ArrowDownRight, Filter, Check } from 'lucide-react';
+import { TrendingUp, TrendingDown, Award, AlertCircle, Loader2, User, ChevronRight, BarChart2, BookOpen, Users, ArrowUpRight, ArrowDownRight, Filter, Check, Search } from 'lucide-react';
 import { isValidUUID } from 'utils/validation';
 
 interface SmartResultAnalyticsProps {
@@ -14,6 +14,7 @@ interface SmartResultAnalyticsProps {
 const SmartResultAnalytics: React.FC<SmartResultAnalyticsProps> = ({ institutionId, lang }) => {
   const [loading, setLoading] = useState(true);
   const [showFilter, setShowFilter] = useState(false);
+  const [filterSearch, setFilterSearch] = useState('');
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>('all');
   const [analytics, setAnalytics] = useState<{
@@ -227,27 +228,45 @@ const SmartResultAnalytics: React.FC<SmartResultAnalyticsProps> = ({ institution
 
         {showFilter && (
             <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowFilter(false)}></div>
-                <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 animate-in zoom-in-95 origin-top-right">
-                    <button 
-                        onClick={() => { setSelectedClassId('all'); setShowFilter(false); }}
-                        className={`w-full text-left px-4 py-3 rounded-xl text-xs font-black transition-all flex items-center justify-between ${selectedClassId === 'all' ? 'bg-blue-50 text-[#2563EB]' : 'text-slate-600 hover:bg-slate-50'}`}
-                    >
-                        All Classes
-                        {selectedClassId === 'all' && <Check size={14} />}
-                    </button>
-                    <div className="h-px bg-slate-50 my-1"></div>
-                    <div className="max-h-60 overflow-y-auto space-y-1">
-                        {classes.map(c => (
+                <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40" onClick={() => setShowFilter(false)}></div>
+                <div className="absolute top-full right-0 mt-2 w-72 bg-white rounded-[2rem] shadow-2xl border border-slate-100 p-4 z-50 animate-in zoom-in-95 origin-top-right">
+                    <div className="mb-3 px-2">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Filter by Class</h4>
+                        <div className="relative">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input 
+                                type="text" 
+                                placeholder="Search class..." 
+                                className="w-full h-9 bg-slate-50 rounded-xl pl-9 pr-3 text-xs font-bold outline-none border border-transparent focus:border-blue-100 focus:bg-blue-50/50 transition-all"
+                                value={filterSearch}
+                                onChange={(e) => setFilterSearch(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+                    
+                    <div className="max-h-[280px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                        <button 
+                            onClick={() => { setSelectedClassId('all'); setShowFilter(false); }}
+                            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-black transition-all flex items-center justify-between group ${selectedClassId === 'all' ? 'bg-[#2563EB] text-white shadow-lg shadow-blue-200' : 'text-slate-600 hover:bg-slate-50'}`}
+                        >
+                            <span>All Classes</span>
+                            {selectedClassId === 'all' && <Check size={14} className={selectedClassId === 'all' ? 'text-white' : 'text-slate-400'} />}
+                        </button>
+                        
+                        {classes.filter(c => c.class_name.toLowerCase().includes(filterSearch.toLowerCase())).map(c => (
                             <button 
                                 key={c.id}
                                 onClick={() => { setSelectedClassId(c.id); setShowFilter(false); }}
-                                className={`w-full text-left px-4 py-3 rounded-xl text-xs font-black transition-all flex items-center justify-between ${selectedClassId === c.id ? 'bg-blue-50 text-[#2563EB]' : 'text-slate-600 hover:bg-slate-50'}`}
+                                className={`w-full text-left px-4 py-3 rounded-xl text-xs font-black transition-all flex items-center justify-between group ${selectedClassId === c.id ? 'bg-[#2563EB] text-white shadow-lg shadow-blue-200' : 'text-slate-600 hover:bg-slate-50'}`}
                             >
-                                {c.class_name}
-                                {selectedClassId === c.id && <Check size={14} />}
+                                <span>{c.class_name}</span>
+                                {selectedClassId === c.id && <Check size={14} className={selectedClassId === c.id ? 'text-white' : 'text-slate-400'} />}
                             </button>
                         ))}
+                        {classes.filter(c => c.class_name.toLowerCase().includes(filterSearch.toLowerCase())).length === 0 && (
+                            <div className="text-center py-4 text-[10px] font-bold text-slate-400">No classes found</div>
+                        )}
                     </div>
                 </div>
             </>
