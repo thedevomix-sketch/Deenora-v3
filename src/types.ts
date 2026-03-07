@@ -22,6 +22,7 @@ export interface Institution {
       seat_plan: boolean;
       accounting: boolean;
       academic_year_promotion?: boolean;
+      voice_broadcast?: boolean;
     };
     result_engine: 'school' | 'befaq' | 'qawmi_custom';
     result_system: 'grading' | 'marks' | 'hifz';

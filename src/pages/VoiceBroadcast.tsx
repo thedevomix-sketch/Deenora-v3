@@ -39,6 +39,12 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
   const [rechargeTrx, setRechargeTrx] = useState('');
   const [isRecharging, setIsRecharging] = useState(false);
 
+  // Upload state
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+
   useEffect(() => {
     if (!madrasah) return;
     fetchWalletBalance();
@@ -267,6 +273,48 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
     }
   };
 
+  const handleUpload = async () => {
+    if (!madrasah || !uploadFile || !uploadTitle) return;
+    setIsUploading(true);
+    try {
+      // 1. Upload file to Supabase Storage
+      const fileExt = uploadFile.name.split('.').pop();
+      const fileName = `${madrasah.id}/${Date.now()}.${fileExt}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('voice-templates')
+        .upload(fileName, uploadFile);
+
+      if (uploadError) throw uploadError;
+
+      // 2. Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('voice-templates')
+        .getPublicUrl(fileName);
+
+      // 3. Insert into database
+      const { error: dbError } = await supabase.from('voice_templates').insert({
+        institution_id: madrasah.id,
+        title: uploadTitle,
+        file_url: publicUrl,
+        provider_status: 'pending', // Needs approval/sync
+        admin_status: 'pending'
+      });
+
+      if (dbError) throw dbError;
+
+      alert('Voice uploaded successfully! It will be available after approval.');
+      setShowUploadModal(false);
+      setUploadFile(null);
+      setUploadTitle('');
+      fetchTemplates();
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      alert('Error uploading voice: ' + error.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto pb-24 animate-in fade-in duration-500">
       <div className="bg-gradient-to-br from-[#1E3A8A] to-[#3B82F6] rounded-b-[2.5rem] pt-8 pb-12 px-6 shadow-2xl relative overflow-hidden mb-8">
@@ -391,6 +439,14 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
 
         {activeTab === 'templates' && (
           <div className="space-y-4">
+            <div className="flex justify-end">
+              <button 
+                onClick={() => setShowUploadModal(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 shadow-md hover:bg-blue-700 transition-colors"
+              >
+                <Upload size={18} /> Upload New Voice
+              </button>
+            </div>
             {loading ? (
               <div className="flex justify-center py-10"><Loader2 className="animate-spin text-blue-500" size={32} /></div>
             ) : templates.length > 0 ? (
@@ -503,6 +559,68 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
           </div>
         )}
       </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 relative">
+            <button 
+              onClick={() => setShowUploadModal(false)} 
+              className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"
+            >
+              <XCircle size={24} />
+            </button>
+            
+            <h3 className="text-xl font-black text-slate-800 mb-6">Upload New Voice</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Voice Title</label>
+                <input 
+                  type="text" 
+                  className="w-full h-12 px-4 rounded-xl border border-slate-200 font-bold text-slate-700 focus:border-blue-500 outline-none"
+                  placeholder="e.g. Eid Greeting"
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Audio File (MP3/WAV)</label>
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer relative group">
+                  <input 
+                    type="file" 
+                    accept="audio/*"
+                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  />
+                  {uploadFile ? (
+                    <div className="flex flex-col items-center text-blue-600">
+                      <CheckCircle2 size={32} className="mb-2" />
+                      <p className="font-bold text-sm">{uploadFile.name}</p>
+                      <p className="text-xs opacity-70">{(uploadFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center text-slate-400 group-hover:text-blue-500 transition-colors">
+                      <Upload size={32} className="mb-2" />
+                      <p className="font-bold text-sm">Click to upload or drag & drop</p>
+                      <p className="text-xs opacity-70">Max size 5MB</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button 
+                onClick={handleUpload}
+                disabled={!uploadFile || !uploadTitle || isUploading}
+                className="w-full h-14 bg-blue-600 text-white font-black rounded-xl mt-4 shadow-lg shadow-blue-500/30 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isUploading ? <Loader2 className="animate-spin" /> : 'Upload Voice'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

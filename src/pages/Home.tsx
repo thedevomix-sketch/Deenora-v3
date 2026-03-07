@@ -48,7 +48,8 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
     results: true,
     admit_card: true,
     seat_plan: true,
-    accounting: true
+    accounting: true,
+    voice_broadcast: false
   };
 
   const fetchDashboardStats = async () => {
@@ -113,11 +114,13 @@ const Home: React.FC<HomeProps> = ({ onStudentClick, lang, dataVersion, triggerR
            <h4 className="text-xl font-black text-[#1E3A8A]">{loadingStats ? '...' : stats.smsBalance}</h4>
            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('wallet', lang, madrasah?.institution_type)}</p>
         </button>
-        <button onClick={onNavigateToVoiceBroadcast} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-150 active:scale-95 transition-all">
-           <div className="w-10 h-10 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><PhoneCall size={20} /></div>
-           <h4 className="text-xl font-black text-[#1E3A8A]">Voice</h4>
-           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">Broadcast</p>
-        </button>
+        {modules.voice_broadcast && (
+          <button onClick={onNavigateToVoiceBroadcast} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-150 active:scale-95 transition-all">
+             <div className="w-10 h-10 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><PhoneCall size={20} /></div>
+             <h4 className="text-xl font-black text-[#1E3A8A]">Voice</h4>
+             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">Broadcast</p>
+          </button>
+        )}
         {modules.attendance && (
           <button onClick={onNavigateToAttendance} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-bubble flex flex-col items-center text-center animate-in zoom-in duration-300 delay-200 active:scale-95 transition-all col-span-2">
              <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mb-2 shadow-inner"><CheckCircle2 size={20} /></div>

@@ -25,12 +25,20 @@ CREATE TABLE IF NOT EXISTS voice_templates (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     institution_id UUID REFERENCES institutions(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
+    file_url TEXT,
     provider_voice_id VARCHAR(255),
     duration INTEGER, -- in seconds
     provider_status VARCHAR(20) DEFAULT 'pending' CHECK (provider_status IN ('pending', 'approved', 'rejected')),
     admin_status VARCHAR(20) DEFAULT 'pending' CHECK (admin_status IN ('pending', 'approved', 'rejected')),
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'voice_templates' AND column_name = 'file_url') THEN
+        ALTER TABLE voice_templates ADD COLUMN file_url TEXT;
+    END IF;
+END $$;
 
 -- 4. Voice Broadcasts Table
 CREATE TABLE IF NOT EXISTS voice_broadcasts (
@@ -67,46 +75,59 @@ ALTER TABLE voice_broadcasts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE voice_call_logs ENABLE ROW LEVEL SECURITY;
 
 -- Wallets RLS
+DROP POLICY IF EXISTS "Institutions can view their own wallet" ON wallets;
 CREATE POLICY "Institutions can view their own wallet" ON wallets
     FOR SELECT USING (institution_id IN (
         SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
 
 -- Wallet Transactions RLS
+DROP POLICY IF EXISTS "Institutions can view their own wallet transactions" ON wallet_transactions;
 CREATE POLICY "Institutions can view their own wallet transactions" ON wallet_transactions
     FOR SELECT USING (institution_id IN (
         SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
 
 -- Voice Templates RLS
+DROP POLICY IF EXISTS "Institutions can view their own voice templates" ON voice_templates;
 CREATE POLICY "Institutions can view their own voice templates" ON voice_templates
     FOR SELECT USING (institution_id IN (
         SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
+
+DROP POLICY IF EXISTS "Institutions can insert their own voice templates" ON voice_templates;
 CREATE POLICY "Institutions can insert their own voice templates" ON voice_templates
     FOR INSERT WITH CHECK (institution_id IN (
         SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
+
+DROP POLICY IF EXISTS "Institutions can update their own voice templates" ON voice_templates;
 CREATE POLICY "Institutions can update their own voice templates" ON voice_templates
     FOR UPDATE USING (institution_id IN (
         SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
+
+DROP POLICY IF EXISTS "Institutions can delete their own voice templates" ON voice_templates;
 CREATE POLICY "Institutions can delete their own voice templates" ON voice_templates
     FOR DELETE USING (institution_id IN (
         SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
 
 -- Voice Broadcasts RLS
+DROP POLICY IF EXISTS "Institutions can view their own voice broadcasts" ON voice_broadcasts;
 CREATE POLICY "Institutions can view their own voice broadcasts" ON voice_broadcasts
     FOR SELECT USING (institution_id IN (
         SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
+
+DROP POLICY IF EXISTS "Institutions can insert their own voice broadcasts" ON voice_broadcasts;
 CREATE POLICY "Institutions can insert their own voice broadcasts" ON voice_broadcasts
     FOR INSERT WITH CHECK (institution_id IN (
         SELECT institution_id FROM profiles WHERE id = auth.uid()
     ));
 
 -- Voice Call Logs RLS
+DROP POLICY IF EXISTS "Institutions can view their own voice call logs" ON voice_call_logs;
 CREATE POLICY "Institutions can view their own voice call logs" ON voice_call_logs
     FOR SELECT USING (institution_id IN (
         SELECT institution_id FROM profiles WHERE id = auth.uid()
@@ -157,3 +178,22 @@ DROP TRIGGER IF EXISTS before_voice_broadcast_insert ON voice_broadcasts;
 CREATE TRIGGER before_voice_broadcast_insert
 BEFORE INSERT ON voice_broadcasts
 FOR EACH ROW EXECUTE FUNCTION deduct_wallet_balance_for_broadcast();
+
+-- Storage Bucket Setup
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('voice-templates', 'voice-templates', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage Policies
+DROP POLICY IF EXISTS "Authenticated users can upload voice templates" ON storage.objects;
+CREATE POLICY "Authenticated users can upload voice templates"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'voice-templates' AND
+  auth.role() = 'authenticated'
+);
+
+DROP POLICY IF EXISTS "Public can view voice templates" ON storage.objects;
+CREATE POLICY "Public can view voice templates"
+ON storage.objects FOR SELECT
+USING ( bucket_id = 'voice-templates' );

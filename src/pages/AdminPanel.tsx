@@ -70,7 +70,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
     admit_card: true,
     seat_plan: true,
     accounting: true,
-    academic_year_promotion: false
+    academic_year_promotion: false,
+    voice_broadcast: false
   });
   const [editSubscriptionEnd, setEditSubscriptionEnd] = useState('');
   const [editStatus, setEditStatus] = useState<'active' | 'suspended' | 'trial'>('active');
@@ -224,6 +225,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
       seat_plan: true,
       accounting: true,
       academic_year_promotion: false,
+      voice_broadcast: false,
       ...(user.config_json?.modules || {})
     });
 
