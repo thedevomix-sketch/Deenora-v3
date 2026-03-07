@@ -53,6 +53,9 @@ async function startServer() {
         body: JSON.stringify(req.body)
       });
       const data = await response.json();
+      if (!response.ok) {
+        return res.status(response.status).json(data);
+      }
       res.json(data);
     } catch (error: any) {
       res.status(500).json({ error: error.message });

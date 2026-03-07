@@ -120,8 +120,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
           throw new Error('No ID returned from Awaj Digital');
         }
       } else {
-        const errorData = await awajResponse.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to upload to Awaj Digital');
+        // Response is already parsed or we need to parse it once
+        let errorMsg = 'Failed to upload to Awaj Digital';
+        try {
+          const errorData = await awajResponse.json();
+          errorMsg = errorData.message || errorData.error || errorMsg;
+        } catch (e) {
+          // If it's not JSON, try to get text
+          try {
+            const textData = await awajResponse.text();
+            if (textData) errorMsg = textData;
+          } catch (e2) {}
+        }
+        throw new Error(errorMsg);
       }
     } catch (err: any) {
       console.error('Error uploading to Awaj:', err);
