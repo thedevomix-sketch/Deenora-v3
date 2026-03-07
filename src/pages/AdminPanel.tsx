@@ -854,27 +854,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ lang, currentView = 'list', dat
                       <div className="bg-slate-50 p-6 rounded-[2.5rem] space-y-6">
                          <div className="flex items-center justify-between px-1">
                             <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                               <Settings size={14} className="text-[#2563EB]" /> Subscription & Settings
+                               <Calendar size={14} className="text-[#2563EB]" /> Active Date
                             </h4>
                          </div>
                          <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                               <div className="space-y-1.5">
-                                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Status</label>
-                                  <select 
-                                    className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm outline-none"
-                                    value={editStatus}
-                                    onChange={(e) => setEditStatus(e.target.value as any)}
-                                  >
-                                    <option value="active">Active</option>
-                                    <option value="suspended">Suspended</option>
-                                    <option value="trial">Trial</option>
-                                  </select>
-                               </div>
-                               <div className="space-y-1.5">
-                                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Valid Till</label>
-                                  <input type="date" className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm" value={editSubscriptionEnd} onChange={(e) => setEditSubscriptionEnd(e.target.value)} />
-                               </div>
+                            <div className="space-y-1.5">
+                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Active Date</label>
+                               <input type="date" className="w-full h-12 bg-white border border-slate-100 rounded-xl px-4 font-black text-sm" value={editSubscriptionEnd} onChange={(e) => setEditSubscriptionEnd(e.target.value)} />
                             </div>
                             
                             <div className="grid grid-cols-2 gap-4">
