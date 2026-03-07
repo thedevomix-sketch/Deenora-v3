@@ -302,46 +302,18 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
         .from('voice-templates')
         .getPublicUrl(fileName);
 
-      let providerVoiceId = null;
-      let providerStatus = 'pending';
-
-      // 3. Upload to Awaj Digital (if configured)
-      try {
-        const awajResponse = await fetch('/api/awaj/voices', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: uploadTitle,
-            file_url: publicUrl
-          })
-        });
-
-        if (awajResponse.ok) {
-          const awajData = await awajResponse.json();
-          if (awajData.voice?.id || awajData.id) {
-            providerVoiceId = awajData.voice?.id || awajData.id;
-            providerStatus = 'approved'; // Assuming direct upload approves it on provider side or sets it to pending there
-          }
-        } else {
-          console.warn('Failed to upload to Awaj Digital, will retry via admin panel');
-        }
-      } catch (err) {
-        console.error('Error uploading to Awaj:', err);
-      }
-
-      // 4. Insert into database
+      // 3. Insert into database
       const { error: dbError } = await supabase.from('voice_templates').insert({
         institution_id: madrasah.id,
         title: uploadTitle,
         file_url: publicUrl,
-        provider_voice_id: providerVoiceId,
-        provider_status: providerStatus,
-        admin_status: 'pending'
+        provider_status: 'draft',
+        admin_status: 'draft'
       });
 
       if (dbError) throw dbError;
 
-      alert('Voice uploaded successfully! It will be available after approval.');
+      alert('Voice uploaded successfully! Please click "Send Request" to submit for approval.');
       setShowUploadModal(false);
       setUploadFile(null);
       setUploadTitle('');
@@ -351,6 +323,58 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
       alert('Error uploading voice: ' + error.message);
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleSendRequest = async (template: any) => {
+    if (!confirm('Are you sure you want to send this voice for approval?')) return;
+    
+    try {
+      let providerVoiceId = null;
+      let providerStatus = 'pending';
+
+      // Upload to Awaj Digital
+      try {
+        const awajResponse = await fetch('/api/awaj/voices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: template.title,
+            file_url: template.file_url
+          })
+        });
+
+        if (awajResponse.ok) {
+          const awajData = await awajResponse.json();
+          // Check if we got an ID back
+          if (awajData.voice?.id || awajData.id) {
+            providerVoiceId = awajData.voice?.id || awajData.id;
+            // If Awaj returns success, it might be pending approval on their side too
+            // But let's assume if we get an ID, it's at least registered
+          }
+        } else {
+          console.warn('Failed to upload to Awaj Digital');
+        }
+      } catch (err) {
+        console.error('Error uploading to Awaj:', err);
+      }
+
+      // Update database status to pending
+      const { error } = await supabase
+        .from('voice_templates')
+        .update({
+          admin_status: 'pending',
+          provider_status: providerStatus, // Set to pending or whatever logic applies
+          provider_voice_id: providerVoiceId
+        })
+        .eq('id', template.id);
+
+      if (error) throw error;
+
+      alert('Request sent successfully!');
+      fetchTemplates();
+    } catch (err: any) {
+      alert('Error sending request: ' + err.message);
     }
   };
 
@@ -533,13 +557,23 @@ const VoiceBroadcast: React.FC<VoiceBroadcastProps> = ({ lang, madrasah, trigger
                         </span>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => handleDeleteTemplate(t.id, t.file_url)}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                      title="Delete Voice"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {t.admin_status === 'draft' && (
+                        <button 
+                          onClick={() => handleSendRequest(t)}
+                          className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-1"
+                        >
+                          <Send size={14} /> Request
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => handleDeleteTemplate(t.id, t.file_url)}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                        title="Delete Voice"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
                   {t.file_url && (
                     <div className="bg-slate-50 p-2 rounded-xl">
