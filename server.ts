@@ -16,8 +16,8 @@ async function startServer() {
   // to improve performance and avoid server-side dependencies.
 
   // Awaj Digital API Proxy Routes
-  const AWAJ_API_TOKEN = process.env.AWAJ_API_TOKEN || 'oat_MjAx.SEI3NWFwX0tObldXclFuZzVMdHItaXBKLVk1WTBzU2UwcjdHZmd2eTI1OTY3NTc1OTU';
-  const AWAJ_BASE_URL = process.env.AWAJ_BASE_URL || 'https://api.awajdigital.com/api/v1';
+  const AWAJ_API_TOKEN = 'oat_MjAx.SEI3NWFwX0tObldXclFuZzVMdHItaXBKLVk1WTBzU2UwcjdHZmd2eTI1OTY3NTc1OTU';
+  const AWAJ_BASE_URL = 'https://api.awajdigital.com/api';
 
   const awajHeaders = {
     'Authorization': `Bearer ${AWAJ_API_TOKEN}`,
